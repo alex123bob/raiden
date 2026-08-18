@@ -485,6 +485,9 @@ function killPlayer() {
   // [ARCADE] Weapon resets to Vulcan Lv1 on any death
   p.weapon    = 0;
   p.weaponLv  = 1;
+  p.chargeTime  = 0;
+  p.charging    = false;
+  p.chargeFired = false;
   if (p.lives <= 0) {
     p.dead = true;
     saveHS();
