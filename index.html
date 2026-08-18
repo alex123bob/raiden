@@ -2269,10 +2269,18 @@ function drawHUD() {
   for (let i = 0; i < player.bombs; i++) ctx.fillText('\u2605', 8 + i * 14, H - 24);
 
   // Weapon name + level (bottom-right)
-  ctx.fillStyle = WEAPON_COLORS[player.weapon];
   ctx.textAlign = 'right';
   ctx.font = '12px monospace';
-  ctx.fillText(WEAPON_NAMES[player.weapon] + ' Lv' + player.weaponLv, W - 8, H - 8);
+  const wSlots = player.weapons;
+  if (wSlots.length === 1) {
+    ctx.fillStyle = WEAPON_COLORS[wSlots[0].type];
+    ctx.fillText(WEAPON_NAMES[wSlots[0].type] + ' Lv' + wSlots[0].lv, W - 8, H - 8);
+  } else {
+    wSlots.forEach((slot, i) => {
+      ctx.fillStyle = WEAPON_COLORS[slot.type];
+      ctx.fillText(WEAPON_NAMES[slot.type] + ' Lv' + slot.lv, W - 8, H - 8 - i * 16);
+    });
+  }
 
   ctx.restore();
 }
