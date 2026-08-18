@@ -574,8 +574,7 @@ function createPlayer() {
     lives: 3,
     bombs: 3,
     invTimer: 0,      // seconds of invincibility remaining
-    weapon: 0,        // 0=vulcan 1=laser 2=missile
-    weaponLv: 1,
+    weapons: [{ type: 0, lv: 1 }],  // FIFO queue, max 2. Each: {type:0-2, lv:1-5}
     shootTimer: 0,
     dead: false,
     respawnTimer: 0,
@@ -757,8 +756,7 @@ function killPlayer() {
   playerBullets.length = 0;
   laserActive = false;
   // [ARCADE] Weapon resets to Vulcan Lv1 on any death
-  p.weapon    = 0;
-  p.weaponLv  = 1;
+  p.weapons = [{ type: 0, lv: 1 }];
   p.chargeTime  = 0;
   p.charging    = false;
   p.chargeFired = false;
@@ -802,6 +800,12 @@ function mkVulcanBullet(x, y, angle) {
     pierce: false,
     trail: [],
   };
+}
+
+// Returns angle offset (radians) for a weapon slot in a combo
+function comboOffset(slotIndex, totalSlots) {
+  if (totalSlots === 1) return 0;
+  return slotIndex === 0 ? -0.26 : 0.26;
 }
 
 function mkSpreadBullet(x, y, angle, lv) {
