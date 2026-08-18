@@ -1502,6 +1502,7 @@ function updateWaves(dt) {
 
 function startStage(stage) {
   currentStage  = stage;
+  diffMult = STAGE_DIFF[stage - 1] * (1 + (loopMult - 1) * 0.2);
   initBackground(stage);
   waveTable     = buildWaveTable(stage);
   waveIndex     = 0;
@@ -1846,7 +1847,6 @@ function drawStageClear() {
 function startGame() {
   score     = 0;
   loopMult  = 1;
-  diffMult  = 1.0;
   player    = createPlayer();
   particles.length = 0;
   powerups.length  = 0;
