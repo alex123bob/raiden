@@ -436,7 +436,7 @@ function mkVulcanBullet(x, y, angle) {
 function firePlayer(p) {
   const lv = p.weaponLv;
   if (p.weapon === 0) {
-    // Vulcan — Arcade-authentic: twin forward guns; spread at lv3+
+    // [ARCADE] Twin forward guns; spread added at higher levels
     const spread = lv >= 3 ? 0.18 : 0;
     playerBullets.push(mkVulcanBullet(p.x - 8, p.y - 20, -Math.PI/2 - spread));
     playerBullets.push(mkVulcanBullet(p.x + 8, p.y - 20, -Math.PI/2 + spread));
@@ -758,7 +758,7 @@ function checkPlayerVsPowerups() {
         // [ARCADE] Same type: level up (capped at 5)
         player.weaponLv = Math.min(5, player.weaponLv + 1);
       } else {
-        // [ARCADE] Different type: switch and reset to level 1 (downgrade-on-switch)
+        // [ARCADE] Weapon downgrade-on-switch: picking a different weapon type resets to Lv1
         player.weapon   = pw.type;
         player.weaponLv = 1;
       }
@@ -816,7 +816,7 @@ function checkPlayerBulletsVsEnemies() {
       score += e.score * loopMult;
       saveHS();
       spawnExplosion(e.x, e.y, e.type + 1, e.color);
-      if (typeof tryDropPowerup === 'function') tryDropPowerup(e);   // defined in Task 9
+      tryDropPowerup(e);
       enemies.splice(i, 1);
     }
   }
@@ -859,7 +859,7 @@ function checkPlayerBulletsVsBoss() {
       if (!b.pierce) { playerBullets.splice(j, 1); j--; }
     }
   }
-  if (boss && boss.hp <= 0 && typeof onBossDeath === 'function') onBossDeath(); // defined in Task 11
+  if (boss && boss.hp <= 0) onBossDeath();
 }
 
 function checkBossBodyVsPlayer() {
@@ -875,7 +875,7 @@ function runCollision() {
   checkEnemyBodiesVsPlayer();
   checkPlayerBulletsVsBoss();
   checkBossBodyVsPlayer();
-  if (typeof checkPlayerVsPowerups === 'function') checkPlayerVsPowerups(); // Task 9
+  checkPlayerVsPowerups();
 }
 
 // === WAVE TABLES ===
@@ -973,6 +973,7 @@ function updateWaves(dt) {
         stageTimer = entry.t - 0.1;
         break;
       }
+      // [ARCADE] Boss spawns only after all regular enemies are cleared
       boss = createBoss(entry.boss);
       bossSpawned = true;
     } else if (entry.type === 3) {
@@ -1177,10 +1178,10 @@ function onBossDeath() {
     state = STATE.STAGECLEAR;
     stageClearTimer = 3.0;
   } else {
-    // [ARCADE] Loop: after Boss 2, restart Stage 1 with cumulative difficulty multiplier
+    // [ARCADE] Loop: after Boss 2, stage 1 restarts with cumulative difficulty multiplier
     loopMult++;
     diffMult = 1.0 + (loopMult - 1) * 0.35 + 0.4;
-    if (typeof startStage === 'function') startStage(1);
+    startStage(1);
     state = STATE.PLAYING;
   }
 }
@@ -1204,9 +1205,8 @@ function drawHUD() {
   ctx.fillStyle = '#999';
   ctx.font = '11px monospace';
   ctx.textAlign = 'center';
-  const stageNum = (typeof currentStage !== 'undefined') ? currentStage : 1;
-  const loopStr  = (typeof loopMult !== 'undefined' && loopMult > 1) ? '  Loop ' + loopMult : '';
-  ctx.fillText('STAGE ' + stageNum + loopStr, W/2, 18);
+  const loopStr = loopMult > 1 ? '  Loop ' + loopMult : '';
+  ctx.fillText('STAGE ' + currentStage + loopStr, W/2, 18);
 
   // Lives icons (bottom-left row)
   ctx.fillStyle = '#88ccff';
