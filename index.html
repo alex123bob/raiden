@@ -1714,42 +1714,78 @@ let bossAngle  = 0;   // rotating arms angle
 let stageClearTimer = 0;
 let victoryTimer = 0;
 
-function createBoss(num) {
-  // Boss 2 has more HP and an extra attack phase (per spec)
-  const hp = num === 1 ? 800 : 1500;
-  bossMaxHp = hp;
+function createBoss(stageNum) {
+  const stats = [
+    { r: 50, hp:  800, phaseCount: 3, spawnMinions: false },
+    { r: 60, hp: 1000, phaseCount: 3, spawnMinions: false },
+    { r: 50, hp: 1100, phaseCount: 3, spawnMinions: false },
+    { r: 55, hp: 1200, phaseCount: 3, spawnMinions: false },
+    { r: 52, hp: 1300, phaseCount: 3, spawnMinions: false },
+    { r: 65, hp: 1500, phaseCount: 4, spawnMinions: true  },
+    { r: 50, hp: 1400, phaseCount: 4, spawnMinions: false },
+    { r: 75, hp: 2000, phaseCount: 5, spawnMinions: true  },
+  ];
+  const s = stats[stageNum - 1];
+  bossMaxHp = s.hp;
   bossPhase = 0;
   bossTimer = 0;
   bossAngle = 0;
   return {
-    num,
+    stageNum,
     x: W/2, y: 130,
-    r: 50,
-    hp,
+    r: s.r,
+    hp: s.hp,
     targetX: W/2, targetY: 130,
     spd: 58,
     fireTimer: 1.8,
+    phaseCount:   s.phaseCount,
+    spawnMinions: s.spawnMinions,
+    minionTimer:  3.0,
+    phantomAlpha: 1.0,
   };
 }
 
 function drawBoss() {
   if (!boss) return;
+  switch (boss.stageNum) {
+    case 1: drawBoss1(); break;
+    case 2: drawBoss2(); break;
+    case 3: drawBoss3(); break;
+    case 4: drawBoss4(); break;
+    case 5: drawBoss5(); break;
+    case 6: drawBoss6(); break;
+    case 7: drawBoss7(); break;
+    case 8: drawBoss8(); break;
+  }
+  drawBossHpBar();
+}
+
+function drawBossHpBar() {
+  const bw = 200, bh = 10;
+  const bx = (W - bw) / 2, by = H - 28;
+  ctx.fillStyle = '#222';
+  ctx.fillRect(bx, by, bw, bh);
+  const frac    = Math.max(0, boss.hp / bossMaxHp);
+  const hpColor = frac > 0.5 ? '#00ee44' : frac > 0.25 ? '#ffaa00' : '#ff2200';
+  ctx.fillStyle = hpColor;
+  ctx.fillRect(bx, by, bw * frac, bh);
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+  ctx.strokeRect(bx, by, bw, bh);
+  ctx.fillStyle = '#fff';
+  ctx.font = '8px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('BOSS', W/2, by - 3);
+}
+
+function drawBoss1() {
   ctx.save();
   ctx.translate(boss.x, boss.y);
-
-  // Body gradient
   const grad = ctx.createRadialGradient(0, 0, 8, 0, 0, boss.r);
-  grad.addColorStop(0, '#ff6622');
-  grad.addColorStop(0.5, '#882211');
-  grad.addColorStop(1, '#330800');
+  grad.addColorStop(0, '#ff6622'); grad.addColorStop(0.5, '#882211'); grad.addColorStop(1, '#330800');
   ctx.fillStyle = grad;
   ctx.beginPath(); ctx.arc(0, 0, boss.r, 0, Math.PI*2); ctx.fill();
-
-  // Rotating segmented arms (Boss 1: 4 arms, Boss 2: 6 arms — distinct silhouette per spec)
-  const armCount = boss.num === 1 ? 4 : 6;
   ctx.save(); ctx.rotate(bossAngle);
-  for (let i = 0; i < armCount; i++) {
-    ctx.save(); ctx.rotate(i * Math.PI * 2 / armCount);
+  for (let i = 0; i < 4; i++) {
+    ctx.save(); ctx.rotate(i * Math.PI/2);
     ctx.fillStyle = '#bb3300';
     ctx.fillRect(-4, 0, 8, boss.r * 0.88);
     ctx.fillStyle = '#ff7700';
@@ -1757,72 +1793,361 @@ function drawBoss() {
     ctx.restore();
   }
   ctx.restore();
-
-  // Central eye
-  ctx.fillStyle = '#ffff00';
-  ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ff0000';
-  ctx.beginPath(); ctx.arc(0, 0,  8, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#000';
-  ctx.beginPath(); ctx.arc(0, 0,  3, 0, Math.PI*2); ctx.fill();
-
+  ctx.fillStyle = '#ffff00'; ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(0, 0,  8, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#000';    ctx.beginPath(); ctx.arc(0, 0,  3, 0, Math.PI*2); ctx.fill();
   ctx.restore();
+}
 
-  // HP bar (bottom of screen, outside translate)
-  const bw = 200, bh = 10;
-  const bx = (W - bw) / 2, by = H - 28;
-  ctx.fillStyle = '#222';
-  ctx.fillRect(bx, by, bw, bh);
-  const frac     = Math.max(0, boss.hp / bossMaxHp);
-  const hpColor  = frac > 0.5 ? '#00ee44' : frac > 0.25 ? '#ffaa00' : '#ff2200';
-  ctx.fillStyle  = hpColor;
-  ctx.fillRect(bx, by, bw * frac, bh);
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(bx, by, bw, bh);
-  ctx.fillStyle = '#fff';
-  ctx.font = '8px monospace'; ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText('BOSS', W/2, by - 3);
+function drawBoss2() {
+  ctx.save();
+  ctx.translate(boss.x, boss.y);
+  ctx.fillStyle = '#334455';
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = i * Math.PI / 3 - Math.PI / 6;
+    i === 0 ? ctx.moveTo(Math.cos(a)*boss.r, Math.sin(a)*boss.r)
+            : ctx.lineTo(Math.cos(a)*boss.r, Math.sin(a)*boss.r);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#8899bb'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.save(); ctx.rotate(bossAngle * 0.6);
+  for (let i = 0; i < 6; i++) {
+    ctx.save(); ctx.rotate(i * Math.PI / 3);
+    ctx.fillStyle = '#5566aa';
+    ctx.fillRect(-5, 0, 10, boss.r * 0.9);
+    ctx.fillStyle = '#aabbff';
+    ctx.beginPath(); ctx.arc(0, boss.r * 0.85, 8, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+  ctx.fillStyle = '#2244ff'; ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#88aaff'; ctx.beginPath(); ctx.arc(0, 0,  8, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0,  3, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawBoss3() {
+  ctx.save();
+  ctx.translate(boss.x, boss.y);
+  ctx.fillStyle = '#443300';
+  ctx.fillRect(-boss.r, -boss.r * 0.6, boss.r * 2, boss.r * 1.2);
+  ctx.strokeStyle = '#aa6600'; ctx.lineWidth = 2;
+  ctx.strokeRect(-boss.r, -boss.r * 0.6, boss.r * 2, boss.r * 1.2);
+  ctx.fillStyle = '#664400';
+  ctx.fillRect(-boss.r - 22, -8, 22, 16);
+  ctx.fillStyle = '#aa7700';
+  ctx.fillRect(-boss.r - 28, -5, 8, 10);
+  ctx.fillStyle = '#664400';
+  ctx.fillRect(boss.r, -8, 22, 16);
+  ctx.fillStyle = '#aa7700';
+  ctx.fillRect(boss.r + 20, -5, 8, 10);
+  ctx.strokeStyle = '#ffaa00'; ctx.lineWidth = 1;
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath(); ctx.moveTo(i * boss.r * 0.55, -boss.r * 0.6);
+    ctx.lineTo(i * boss.r * 0.55, -boss.r * 0.6 - 12); ctx.stroke();
+  }
+  ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff4400'; ctx.beginPath(); ctx.arc(0, 0,  7, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawBoss4() {
+  ctx.save();
+  ctx.translate(boss.x, boss.y);
+  const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, boss.r);
+  grad.addColorStop(0, '#44aa44'); grad.addColorStop(0.6, '#226622'); grad.addColorStop(1, '#112211');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(0, 0, boss.r, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#66ee44'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.save(); ctx.rotate(bossAngle * 0.4);
+  for (let i = 0; i < 4; i++) {
+    ctx.save(); ctx.rotate(i * Math.PI / 2);
+    ctx.fillStyle = '#88cc22';
+    ctx.beginPath();
+    ctx.moveTo(0, boss.r); ctx.lineTo(6, boss.r + 16);
+    ctx.lineTo(0, boss.r + 24); ctx.lineTo(-6, boss.r + 16);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+  ctx.fillStyle = '#ccff00'; ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#446600'; ctx.beginPath(); ctx.arc(0, 0,  6, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawBoss5() {
+  ctx.save();
+  ctx.translate(boss.x, boss.y);
+  const glow = ctx.createRadialGradient(0, 0, boss.r * 0.5, 0, 0, boss.r * 1.8);
+  glow.addColorStop(0, 'rgba(255,200,0,0.3)');
+  glow.addColorStop(1, 'rgba(255,80,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(0, 0, boss.r * 1.8, 0, Math.PI*2); ctx.fill();
+  ctx.save(); ctx.rotate(bossAngle * 0.7);
+  for (let i = 0; i < 8; i++) {
+    ctx.save(); ctx.rotate(i * Math.PI / 4);
+    ctx.fillStyle = '#ffaa00';
+    ctx.beginPath();
+    ctx.moveTo(-5, boss.r * 0.8); ctx.lineTo(0, boss.r * 1.5); ctx.lineTo(5, boss.r * 0.8);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+  const solarGrad = ctx.createRadialGradient(-8, -8, 4, 0, 0, boss.r);
+  solarGrad.addColorStop(0, '#ffffff'); solarGrad.addColorStop(0.3, '#ffee44');
+  solarGrad.addColorStop(0.8, '#ff8800'); solarGrad.addColorStop(1, '#cc2200');
+  ctx.fillStyle = solarGrad;
+  ctx.beginPath(); ctx.arc(0, 0, boss.r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#cc4400'; ctx.beginPath(); ctx.arc(8, -6, 7, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#882200'; ctx.beginPath(); ctx.arc(8, -6, 4, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawBoss6() {
+  ctx.save();
+  ctx.translate(boss.x, boss.y);
+  ctx.fillStyle = '#223344';
+  ctx.fillRect(-boss.r, -boss.r * 0.7, boss.r * 2, boss.r * 1.4);
+  ctx.strokeStyle = '#334466'; ctx.lineWidth = 2;
+  for (let row = -1; row <= 1; row++) {
+    ctx.beginPath();
+    ctx.moveTo(-boss.r + 4, row * boss.r * 0.3);
+    ctx.lineTo( boss.r - 4, row * boss.r * 0.3);
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#112233';
+  ctx.fillRect(-boss.r - 20, -15, 20, 30);
+  ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1;
+  ctx.strokeRect(-boss.r - 20, -15, 20, 30);
+  ctx.fillStyle = '#112233';
+  ctx.fillRect(boss.r, -15, 20, 30);
+  ctx.strokeRect(boss.r, -15, 20, 30);
+  for (const side of [-1, 1]) {
+    ctx.fillStyle = '#334455';
+    ctx.beginPath(); ctx.arc(side * boss.r * 0.6, boss.r * 0.5, 8, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#6688aa';
+    ctx.beginPath(); ctx.arc(side * boss.r * 0.6, boss.r * 0.5, 5, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.fillStyle = '#4455aa'; ctx.fillRect(-18, -boss.r * 0.7 - 14, 36, 14);
+  ctx.fillStyle = '#00ccff'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0,  5, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawBoss7() {
+  ctx.save();
+  ctx.translate(boss.x, boss.y);
+  ctx.globalAlpha = boss.phantomAlpha;
+  ctx.fillStyle = '#220044';
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4 - Math.PI / 8;
+    i === 0 ? ctx.moveTo(Math.cos(a)*boss.r, Math.sin(a)*boss.r)
+            : ctx.lineTo(Math.cos(a)*boss.r, Math.sin(a)*boss.r);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#9933ff'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.save(); ctx.rotate(-bossAngle * 1.2);
+  for (let i = 0; i < 4; i++) {
+    ctx.save(); ctx.rotate(i * Math.PI / 2);
+    ctx.strokeStyle = 'rgba(180,60,255,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(0, boss.r * 0.75); ctx.stroke();
+    ctx.fillStyle = '#aa44ff';
+    ctx.beginPath(); ctx.arc(0, boss.r * 0.7, 5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+  ctx.fillStyle = '#cc00ff'; ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#440088'; ctx.beginPath(); ctx.arc(0, 0,  7, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff88ff'; ctx.beginPath(); ctx.arc(0, 0,  3, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+function drawBoss8() {
+  const pulse = 0.85 + Math.sin(bossTimer * 2.2) * 0.15;
+  ctx.save();
+  ctx.translate(boss.x, boss.y);
+  const outerR = boss.r * pulse;
+  const outerGlow = ctx.createRadialGradient(0, 0, outerR * 0.5, 0, 0, outerR * 1.4);
+  outerGlow.addColorStop(0, 'rgba(180,0,20,0.2)');
+  outerGlow.addColorStop(1, 'rgba(80,0,10,0)');
+  ctx.fillStyle = outerGlow;
+  ctx.beginPath(); ctx.arc(0, 0, outerR * 1.4, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath();
+  for (let a = 0; a < Math.PI * 2; a += 0.1) {
+    const distort = 1 + Math.sin(a * 5 + bossTimer) * 0.08;
+    const rx = Math.cos(a) * outerR * distort;
+    const ry = Math.sin(a) * outerR * distort;
+    a === 0 ? ctx.moveTo(rx, ry) : ctx.lineTo(rx, ry);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#550010'; ctx.fill();
+  ctx.strokeStyle = '#bb0022'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.save(); ctx.rotate(-bossAngle * 0.5);
+  ctx.fillStyle = '#880022';
+  ctx.beginPath(); ctx.arc(0, 0, boss.r * 0.7, 0, Math.PI*2); ctx.fill();
+  for (let i = 0; i < 6; i++) {
+    ctx.save(); ctx.rotate(i * Math.PI / 3);
+    ctx.fillStyle = '#aa0033';
+    ctx.beginPath();
+    ctx.moveTo(-4, boss.r * 0.5); ctx.lineTo(0, boss.r * 0.72); ctx.lineTo(4, boss.r * 0.5);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+  const coreR = boss.r * 0.4 * pulse;
+  const coreGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, coreR);
+  coreGrad.addColorStop(0, '#ffffff'); coreGrad.addColorStop(0.4, '#ff4444'); coreGrad.addColorStop(1, '#880000');
+  ctx.fillStyle = coreGrad;
+  ctx.beginPath(); ctx.arc(0, 0, coreR, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
 }
 
 function fireBoss() {
-  if (!player || player.dead) return;
-  const dx  = player.x - boss.x, dy = player.y - boss.y;
-  const d   = Math.sqrt(dx*dx + dy*dy) || 1;
+  if (!player || player.dead || !boss) return;
+  switch (boss.stageNum) {
+    case 1: fireBoss1(); break;
+    case 2: fireBoss2(); break;
+    case 3: fireBoss3(); break;
+    case 4: fireBoss4(); break;
+    case 5: fireBoss5(); break;
+    case 6: fireBoss6(); break;
+    case 7: fireBoss7(); break;
+    case 8: fireBoss8(); break;
+  }
+}
+
+function fireBoss1() {
+  const dx = player.x - boss.x, dy = player.y - boss.y;
+  const d = Math.sqrt(dx*dx + dy*dy) || 1;
   const spd = (175 + bossPhase * 35) * diffMult;
-
-  const mkEB = (vx, vy, clr) =>
-    enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: 5, clr });
-
-  // Phase 0: spread barrage; Phase 1: tight aimed streams;
-  // Phase 2: rotating ring; Phase 3 (Boss 2 only): ring+aimed
-  switch (bossPhase % (boss.num === 1 ? 3 : 4)) {
-    case 0: // wide spread
+  const mkEB = (vx, vy, clr) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: 5, clr });
+  switch (bossPhase) {
+    case 0:
       for (let i = -3; i <= 3; i++) {
         const ang = Math.atan2(dy, dx) + i * 0.14;
         mkEB(Math.cos(ang)*spd, Math.sin(ang)*spd, '#ff2200');
       }
       break;
-    case 1: // aimed twin streams
+    case 1:
       [-0.08, 0.08].forEach(a => {
         const ang = Math.atan2(dy, dx) + a;
         mkEB(Math.cos(ang)*spd, Math.sin(ang)*spd, '#ff8800');
       });
       break;
-    case 2: // rotating ring
+    case 2:
       for (let i = 0; i < 8; i++) {
         const ang = bossAngle + i * Math.PI*2/8;
         mkEB(Math.cos(ang)*spd*0.7, Math.sin(ang)*spd*0.7, '#cc00ff');
       }
       break;
-    case 3: // Boss 2 extra: ring + aimed (faster/denser)
-      for (let i = 0; i < 12; i++) {
-        const ang = bossAngle + i * Math.PI*2/12;
-        mkEB(Math.cos(ang)*spd*0.8, Math.sin(ang)*spd*0.8, '#ff00cc');
-      }
-      mkEB(dx/d*spd, dy/d*spd, '#ffff00');
-      break;
+  }
+}
+
+function fireBoss2() {
+  const spd = (120 + bossPhase * 20) * diffMult;
+  const count = [8, 12, 16][Math.min(bossPhase, 2)];
+  const mkEB = (vx, vy, clr) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: 5, clr });
+  for (let i = 0; i < count; i++) {
+    const ang = bossAngle + (i / count) * Math.PI * 2;
+    mkEB(Math.cos(ang)*spd, Math.sin(ang)*spd, '#4466ff');
+  }
+}
+
+function fireBoss3() {
+  const dx = player.x - boss.x, dy = player.y - boss.y;
+  const d = Math.sqrt(dx*dx + dy*dy) || 1;
+  const spd = (165 + bossPhase * 30) * diffMult;
+  const mkEB = (ox, vx, vy, clr) => enemyBullets.push({ x: boss.x + ox, y: boss.y, vx, vy, r: 5, clr });
+  const side = Math.floor(bossTimer * 2) % 2 === 0 ? -1 : 1;
+  const ox = side * (boss.r + 14);
+  const baseA = Math.atan2(dy, dx);
+  for (let j = 0; j < 3; j++) {
+    const a = baseA + (j - 1) * 0.08;
+    mkEB(ox, Math.cos(a)*spd, Math.sin(a)*spd, '#ff8800');
+  }
+}
+
+function fireBoss4() {
+  const dx = player.x - boss.x, dy = player.y - boss.y;
+  const d = Math.sqrt(dx*dx + dy*dy) || 1;
+  const spd = (140 + bossPhase * 25) * diffMult;
+  const mkEB = (vx, vy, clr, r) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: r||5, clr });
+  mkEB((Math.random()-0.5)*20, 12, '#44ee44', 7);
+  const baseA = Math.atan2(dy, dx);
+  for (let j = -1; j <= 1; j++) {
+    const a = baseA + j * 0.22;
+    mkEB(Math.cos(a)*spd, Math.sin(a)*spd, '#88cc00');
+  }
+}
+
+function fireBoss5() {
+  const dx = player.x - boss.x, dy = player.y - boss.y;
+  const d = Math.sqrt(dx*dx + dy*dy) || 1;
+  const spd = (155 + bossPhase * 30) * diffMult;
+  const mkEB = (vx, vy, clr) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: 5, clr });
+  const arcCount = 5 + bossPhase * 2;
+  const halfSpan = 0.40;
+  for (let i = 0; i < arcCount; i++) {
+    const a = bossAngle + (-halfSpan + (i / (arcCount-1)) * halfSpan * 2);
+    mkEB(Math.cos(a)*spd*0.85, Math.sin(a)*spd*0.85, '#ffaa00');
+  }
+  mkEB(dx/d*spd, dy/d*spd, '#ffff44');
+}
+
+function fireBoss6() {
+  const dx = player.x - boss.x, dy = player.y - boss.y;
+  const d = Math.sqrt(dx*dx + dy*dy) || 1;
+  const spd = (160 + bossPhase * 28) * diffMult;
+  const mkEB = (vx, vy, clr) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: 5, clr });
+  const spreadCount = 5 + bossPhase;
+  const baseA = Math.atan2(dy, dx);
+  for (let i = 0; i < spreadCount; i++) {
+    const a = baseA + (-0.35 + (i / (spreadCount-1)) * 0.70);
+    mkEB(Math.cos(a)*spd, Math.sin(a)*spd, '#00ccff');
+  }
+}
+
+function fireBoss7() {
+  const dx = player.x - boss.x, dy = player.y - boss.y;
+  const d = Math.sqrt(dx*dx + dy*dy) || 1;
+  const spd = (200 + bossPhase * 35) * diffMult;
+  const mkEB = (vx, vy, clr) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: 5, clr });
+  [-0.06, 0.06].forEach(a => {
+    const ang = Math.atan2(dy, dx) + a;
+    mkEB(Math.cos(ang)*spd, Math.sin(ang)*spd, '#aa44ff');
+  });
+  const scatterCount = 2 + bossPhase;
+  for (let i = 0; i < scatterCount; i++) {
+    const a = Math.random() * Math.PI * 2;
+    mkEB(Math.cos(a)*spd*0.7, Math.sin(a)*spd*0.7, '#cc88ff');
+  }
+}
+
+function fireBoss8() {
+  const dx = player.x - boss.x, dy = player.y - boss.y;
+  const d = Math.sqrt(dx*dx + dy*dy) || 1;
+  const spd = (175 + bossPhase * 28) * diffMult;
+  const mkEB = (vx, vy, clr, r) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: r||5, clr });
+  const ringCount = 8 + bossPhase * 2;
+  for (let i = 0; i < ringCount; i++) {
+    const a = bossAngle + (i / ringCount) * Math.PI * 2;
+    mkEB(Math.cos(a)*spd*0.65, Math.sin(a)*spd*0.65, '#ff2200');
+  }
+  if (bossPhase >= 1) {
+    const baseA = Math.atan2(dy, dx);
+    [-0.10, 0, 0.10].forEach(off => {
+      mkEB(Math.cos(baseA+off)*spd, Math.sin(baseA+off)*spd, '#ff8800');
+    });
+  }
+  if (bossPhase >= 2) {
+    for (let i = 0; i < 4; i++) {
+      const a = Math.random() * Math.PI * 2;
+      mkEB(Math.cos(a)*spd*0.75, Math.sin(a)*spd*0.75, '#ffaa00');
+    }
   }
 }
 
@@ -1831,35 +2156,45 @@ function updateBoss(dt) {
   bossTimer += dt;
   bossAngle += dt * 0.85;
 
-  // Patrol movement toward target
   const dx = boss.targetX - boss.x, dy = boss.targetY - boss.y;
   const d  = Math.sqrt(dx*dx + dy*dy) || 1;
   if (d > 5) {
     boss.x += dx/d * boss.spd * dt;
     boss.y += dy/d * boss.spd * dt;
   } else {
-    // Pick new patrol target
     boss.targetX = 80 + Math.random() * (W - 160);
     boss.targetY = 60 + Math.random() * 140;
   }
 
-  // Phase from HP percentage:
-  // Boss 1: 3 phases (0=above 60%, 1=above 30%, 2=below 30%)
-  // Boss 2: 4 phases (0>65%, 1>40%, 2>18%, 3=below 18%)
   const hpPct = boss.hp / bossMaxHp;
-  if (boss.num === 1) {
-    bossPhase = hpPct > 0.6 ? 0 : hpPct > 0.3 ? 1 : 2;
-  } else {
-    bossPhase = hpPct > 0.65 ? 0 : hpPct > 0.4 ? 1 : hpPct > 0.18 ? 2 : 3;
+  bossPhase = boss.phaseCount - 1 - Math.floor(hpPct * boss.phaseCount);
+  bossPhase = Math.max(0, Math.min(boss.phaseCount - 1, bossPhase));
+
+  if (boss.stageNum === 7) {
+    boss.phantomAlpha = 0.65 + Math.sin(bossTimer * 1.5) * 0.35;
   }
 
-  // Fire
+  if (boss.spawnMinions) {
+    boss.minionTimer -= dt;
+    if (boss.minionTimer <= 0) {
+      spawnMinion();
+      boss.minionTimer = 3.0 / diffMult;
+    }
+  }
+
   boss.fireTimer -= dt;
   if (boss.fireTimer <= 0) {
     fireBoss();
-    const rate    = [1.2, 0.85, 0.55, 0.38][Math.min(bossPhase, 3)];
+    const rate = [1.2, 0.85, 0.55, 0.38, 0.28][Math.min(bossPhase, 4)];
     boss.fireTimer = (rate / diffMult) + Math.random() * 0.25;
   }
+}
+
+function spawnMinion() {
+  if (!boss) return;
+  const e = mkEnemy(0, boss.x + (Math.random()-0.5)*40, boss.y + 20, null);
+  e.spd = ENEMY_CFG[0].spd * diffMult * 1.2;
+  enemies.push(e);
 }
 
 function onBossDeath() {
