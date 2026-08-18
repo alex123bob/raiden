@@ -878,6 +878,183 @@ function runCollision() {
   if (typeof checkPlayerVsPowerups === 'function') checkPlayerVsPowerups(); // Task 9
 }
 
+// === BOSS ===
+let bossMaxHp  = 0;
+let bossPhase  = 0;
+let bossTimer  = 0;
+let bossAngle  = 0;   // rotating arms angle
+let stageClearTimer = 0;
+
+function createBoss(num) {
+  // Boss 2 has more HP and an extra attack phase (per spec)
+  const hp = num === 1 ? 800 : 1500;
+  bossMaxHp = hp;
+  bossPhase = 0;
+  bossTimer = 0;
+  bossAngle = 0;
+  return {
+    num,
+    x: W/2, y: 130,
+    r: 50,
+    hp,
+    targetX: W/2, targetY: 130,
+    spd: 58,
+    fireTimer: 1.8,
+  };
+}
+
+function drawBoss() {
+  if (!boss) return;
+  ctx.save();
+  ctx.translate(boss.x, boss.y);
+
+  // Body gradient
+  const grad = ctx.createRadialGradient(0, 0, 8, 0, 0, boss.r);
+  grad.addColorStop(0, '#ff6622');
+  grad.addColorStop(0.5, '#882211');
+  grad.addColorStop(1, '#330800');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(0, 0, boss.r, 0, Math.PI*2); ctx.fill();
+
+  // Rotating segmented arms (Boss 1: 4 arms, Boss 2: 6 arms — distinct silhouette per spec)
+  const armCount = boss.num === 1 ? 4 : 6;
+  ctx.save(); ctx.rotate(bossAngle);
+  for (let i = 0; i < armCount; i++) {
+    ctx.save(); ctx.rotate(i * Math.PI * 2 / armCount);
+    ctx.fillStyle = '#bb3300';
+    ctx.fillRect(-4, 0, 8, boss.r * 0.88);
+    ctx.fillStyle = '#ff7700';
+    ctx.beginPath(); ctx.arc(0, boss.r * 0.82, 9, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // Central eye
+  ctx.fillStyle = '#ffff00';
+  ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff0000';
+  ctx.beginPath(); ctx.arc(0, 0,  8, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(0, 0,  3, 0, Math.PI*2); ctx.fill();
+
+  ctx.restore();
+
+  // HP bar (bottom of screen, outside translate)
+  const bw = 200, bh = 10;
+  const bx = (W - bw) / 2, by = H - 28;
+  ctx.fillStyle = '#222';
+  ctx.fillRect(bx, by, bw, bh);
+  const frac     = Math.max(0, boss.hp / bossMaxHp);
+  const hpColor  = frac > 0.5 ? '#00ee44' : frac > 0.25 ? '#ffaa00' : '#ff2200';
+  ctx.fillStyle  = hpColor;
+  ctx.fillRect(bx, by, bw * frac, bh);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx, by, bw, bh);
+  ctx.fillStyle = '#fff';
+  ctx.font = '8px monospace'; ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('BOSS', W/2, by - 3);
+}
+
+function fireBoss() {
+  if (!player || player.dead) return;
+  const dx  = player.x - boss.x, dy = player.y - boss.y;
+  const d   = Math.sqrt(dx*dx + dy*dy) || 1;
+  const spd = (175 + bossPhase * 35) * diffMult;
+
+  const mkEB = (vx, vy, clr) =>
+    enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: 5, clr });
+
+  // Phase 0: spread barrage; Phase 1: tight aimed streams;
+  // Phase 2: rotating ring; Phase 3 (Boss 2 only): ring+aimed
+  switch (bossPhase % (boss.num === 1 ? 3 : 4)) {
+    case 0: // wide spread
+      for (let i = -3; i <= 3; i++) {
+        const ang = Math.atan2(dy, dx) + i * 0.14;
+        mkEB(Math.cos(ang)*spd, Math.sin(ang)*spd, '#ff2200');
+      }
+      break;
+    case 1: // aimed twin streams
+      [-0.08, 0.08].forEach(a => {
+        const ang = Math.atan2(dy, dx) + a;
+        mkEB(Math.cos(ang)*spd, Math.sin(ang)*spd, '#ff8800');
+      });
+      break;
+    case 2: // rotating ring
+      for (let i = 0; i < 8; i++) {
+        const ang = bossAngle + i * Math.PI*2/8;
+        mkEB(Math.cos(ang)*spd*0.7, Math.sin(ang)*spd*0.7, '#cc00ff');
+      }
+      break;
+    case 3: // Boss 2 extra: ring + aimed (faster/denser)
+      for (let i = 0; i < 12; i++) {
+        const ang = bossAngle + i * Math.PI*2/12;
+        mkEB(Math.cos(ang)*spd*0.8, Math.sin(ang)*spd*0.8, '#ff00cc');
+      }
+      mkEB(dx/d*spd, dy/d*spd, '#ffff00');
+      break;
+  }
+}
+
+function updateBoss(dt) {
+  if (!boss) return;
+  bossTimer += dt;
+  bossAngle += dt * 0.85;
+
+  // Patrol movement toward target
+  const dx = boss.targetX - boss.x, dy = boss.targetY - boss.y;
+  const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+  if (d > 5) {
+    boss.x += dx/d * boss.spd * dt;
+    boss.y += dy/d * boss.spd * dt;
+  } else {
+    // Pick new patrol target
+    boss.targetX = 80 + Math.random() * (W - 160);
+    boss.targetY = 60 + Math.random() * 140;
+  }
+
+  // Phase from HP percentage:
+  // Boss 1: 3 phases (0=above 60%, 1=above 30%, 2=below 30%)
+  // Boss 2: 4 phases (0>65%, 1>40%, 2>18%, 3=below 18%)
+  const hpPct = boss.hp / bossMaxHp;
+  if (boss.num === 1) {
+    bossPhase = hpPct > 0.6 ? 0 : hpPct > 0.3 ? 1 : 2;
+  } else {
+    bossPhase = hpPct > 0.65 ? 0 : hpPct > 0.4 ? 1 : hpPct > 0.18 ? 2 : 3;
+  }
+
+  // Fire
+  boss.fireTimer -= dt;
+  if (boss.fireTimer <= 0) {
+    fireBoss();
+    const rate    = [1.2, 0.85, 0.55, 0.38][Math.min(bossPhase, 3)];
+    boss.fireTimer = (rate / diffMult) + Math.random() * 0.25;
+  }
+}
+
+function onBossDeath() {
+  spawnExplosion(boss.x,      boss.y,      6, '#ffaa00');
+  spawnExplosion(boss.x + 35, boss.y - 25, 4, '#ff4400');
+  spawnExplosion(boss.x - 35, boss.y + 15, 4, '#ffcc00');
+  const bossNum = boss.num;
+  score += (bossNum === 1 ? 5000 : 10000) * loopMult;
+  saveHS();
+  boss = null;
+
+  if (bossNum === 1) {
+    // Stage clear transition
+    state = STATE.STAGECLEAR;
+    stageClearTimer = 3.0;
+  } else {
+    // [ARCADE] Loop: after Boss 2, restart Stage 1 with cumulative difficulty multiplier
+    loopMult++;
+    diffMult = 1.0 + (loopMult - 1) * 0.35 + 0.4;
+    if (typeof startStage === 'function') startStage(1);
+    state = STATE.PLAYING;
+  }
+}
+
 // === HUD & SCREENS ===
 function drawHUD() {
   ctx.save();
@@ -1053,6 +1230,8 @@ function loop(ts) {
   if (state === STATE.PLAYING) updateEnemyBullets(dt);
   if (state === STATE.PLAYING) runCollision();
   if (state === STATE.PLAYING) updatePowerups(dt);
+  if (state === STATE.PLAYING) updateBoss(dt);
+
 
   // Render
   ctx.fillStyle = '#020208';
@@ -1066,6 +1245,7 @@ function loop(ts) {
   else if (state === STATE.GAMEOVER) drawGameOver();
   else {
     enemies.forEach(drawEnemy);
+    drawBoss();
     drawEnemyBullets();
     drawPowerups();
     drawPlayerBullets();
