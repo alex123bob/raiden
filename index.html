@@ -1277,20 +1277,25 @@ function checkPlayerVsPowerups() {
   if (!player || player.dead) return;
   for (let i = powerups.length - 1; i >= 0; i--) {
     const pw = powerups[i];
-    if (circleHit(pw.x, pw.y, pw.r, player.x, player.y, player.r + 10)) {
-      sfxPowerup();
-      if (pw.isBomb) {
-        player.bombs = Math.min(3, player.bombs + 1);
-      } else if (pw.type === player.weapon) {
-        // [ARCADE] Same type: level up (capped at 5)
-        player.weaponLv = Math.min(5, player.weaponLv + 1);
+    if (!circleHit(pw.x, pw.y, pw.r, player.x, player.y, player.r + 10)) continue;
+    sfxPowerup();
+    if (pw.isBomb) {
+      player.bombs = Math.min(3, player.bombs + 1);
+    } else {
+      const slots = player.weapons;
+      const existing = slots.findIndex(s => s.type === pw.type);
+      if (existing !== -1) {
+        // [ARCADE] Same type already held: level up that slot (cap 5)
+        slots[existing].lv = Math.min(5, slots[existing].lv + 1);
       } else {
-        // [ARCADE] Weapon downgrade-on-switch: picking a different weapon type resets to Lv1
-        player.weapon   = pw.type;
-        player.weaponLv = 1;
+        // [COMBO] New weapon type — add to FIFO queue
+        if (slots.length >= 2) {
+          slots.shift(); // evict oldest
+        }
+        slots.push({ type: pw.type, lv: 1 });
       }
-      powerups.splice(i, 1);
     }
+    powerups.splice(i, 1);
   }
 }
 
