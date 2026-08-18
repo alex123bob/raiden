@@ -634,16 +634,17 @@ function drawPlayer(p) {
   ctx.restore();
 
   // Charge ring indicator — only at lv5 while charging
-  if (p.weaponLv === 5 && p.charging && p.chargeTime > 0) {
+  if (p.weapons[0].lv === 5 && p.charging && p.chargeTime > 0) {
     const frac  = Math.min(1, p.chargeTime / CHARGE_DURATION);
     const ringR = 28 + frac * 8;
     const startAngle = -Math.PI / 2;
     const endAngle   = startAngle + frac * Math.PI * 2;
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.shadowColor = WEAPON_COLORS[p.weapon];
+    const primaryColor = WEAPON_COLORS[p.weapons[0].type];
+    ctx.shadowColor = primaryColor;
     ctx.shadowBlur  = 12 + frac * 16;
-    ctx.strokeStyle = WEAPON_COLORS[p.weapon];
+    ctx.strokeStyle = primaryColor;
     ctx.lineWidth   = 3;
     ctx.globalAlpha = 0.55 + frac * 0.45;
     ctx.beginPath();
@@ -687,7 +688,7 @@ function updatePlayer(dt) {
   laserActive = false;
   p.shootTimer -= dt;
 
-  if (p.weaponLv === 5) {
+  if (p.weapons[0].lv === 5) {
     if (keys['Space']) {
       if (!p.charging) p.charging = true;
       p.chargeTime += dt;
@@ -797,6 +798,7 @@ function mkVulcanBullet(x, y, angle) {
     // store angle for drawing the elongated capsule shape
     angle,
     r: 4, dmg: 5, life: 2.0,
+    lv: 1,   // overwritten by caller for correct trail/spark behavior
     pierce: false,
     trail: [],
   };
@@ -899,46 +901,44 @@ function firePlayer(p) {
 }
 
 function fireSuper(p) {
-  if (p.weapon === 0) {
-    // Vulcan super: 12 bullets in 240° arc from nose
-    const UP = -Math.PI / 2;
-    const halfArc = Math.PI * 2 / 3;
-    const count   = 12;
-    for (let i = 0; i < count; i++) {
-      const a = UP - halfArc + (i / (count - 1)) * (halfArc * 2);
-      const b = mkVulcanBullet(p.x, p.y - 22, a);
-      b.r   = 6;
-      b.dmg = 15;
-      playerBullets.push(b);
+  const total = p.weapons.length;
+  p.weapons.forEach((slot, idx) => {
+    const off = comboOffset(idx, total);
+    const UP  = -Math.PI / 2;
+
+    if (slot.type === 0) {
+      const halfArc = Math.PI * 2 / 3;
+      const count = 12;
+      for (let i = 0; i < count; i++) {
+        const a = UP + off - halfArc + (i/(count-1))*(halfArc*2);
+        const b = mkVulcanBullet(p.x, p.y-22, a);
+        b.r = 6; b.dmg = 15; b.lv = slot.lv;
+        playerBullets.push(b);
+      }
+      sfxShoot(0);
+    } else if (slot.type === 1) {
+      const count = 16;
+      for (let i = 0; i < count; i++) {
+        const a = off + (i/count)*Math.PI*2;
+        const b = mkSpreadBullet(p.x, p.y, a, 5);
+        b.r = 7; b.dmg = 18;
+        playerBullets.push(b);
+      }
+      sfxShoot(1);
+    } else if (slot.type === 2) {
+      const count = 8;
+      const spreadMul = total > 1 ? 1.8 : 1.0;
+      for (let i = 0; i < count; i++) {
+        const offset = (i-(count-1)/2)*20*spreadMul;
+        playerBullets.push({
+          type: 'missile', x: p.x+offset, y: p.y-20,
+          vx: offset*0.5 + Math.sin(off)*80, vy: -320,
+          r: 6, dmg: 20, life: 2.5, homingDelay: 0, pierce: false,
+        });
+      }
+      sfxShoot(2);
     }
-    sfxShoot(0);
-  } else if (p.weapon === 1) {
-    // Spread super: 16 bullets in full 360° ring
-    const count = 16;
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2;
-      const b = mkSpreadBullet(p.x, p.y, a, 5);
-      b.r   = 7;
-      b.dmg = 18;
-      playerBullets.push(b);
-    }
-    sfxShoot(1);
-  } else if (p.weapon === 2) {
-    // Missile super: 8 homing missiles, home immediately
-    const count = 8;
-    for (let i = 0; i < count; i++) {
-      const offset = (i - (count - 1) / 2) * 20;
-      playerBullets.push({
-        type: 'missile',
-        x: p.x + offset, y: p.y - 20,
-        vx: offset * 0.5, vy: -320,
-        r: 6, dmg: 20, life: 2.5,
-        homingDelay: 0,
-        pierce: false,
-      });
-    }
-    sfxShoot(2);
-  }
+  });
 }
 
 function updatePlayerBullets(dt) {
@@ -1044,8 +1044,8 @@ function drawPlayerBullets() {
       ctx.stroke();
     } else {
       // Vulcan bullet — draw trail for lv3+, then capsule
-      if (b.trail && b.trail.length > 0 && player && player.weaponLv >= 3) {
-        const trailLen = player.weaponLv >= 4 ? 5 : 3;
+      if (b.trail && b.trail.length > 0 && b.lv >= 3) {
+        const trailLen = b.lv >= 4 ? 5 : 3;
         const pts = b.trail.slice(0, trailLen);
         for (let t = 0; t < pts.length; t++) {
           const alpha = (1 - (t + 1) / (trailLen + 1)) * 0.55;
@@ -1329,7 +1329,7 @@ function checkPlayerBulletsVsEnemies() {
       const b = playerBullets[j];
       if (circleHit(e.x, e.y, e.r, b.x, b.y, b.r)) {
         e.hp -= b.dmg;
-        if (b.type === 'bullet' && player && player.weaponLv === 5) {
+        if (b.type === 'bullet' && b.lv === 5) {
           spawnExplosion(b.x, b.y, 0.5, '#ffffff');
         }
         if (!b.pierce) { playerBullets.splice(j, 1); j--; }
@@ -1374,7 +1374,7 @@ function checkPlayerBulletsVsBoss() {
     const b = playerBullets[j];
     if (circleHit(boss.x, boss.y, boss.r, b.x, b.y, b.r)) {
       boss.hp -= b.dmg;
-      if (b.type === 'bullet' && player && player.weaponLv === 5) {
+      if (b.type === 'bullet' && b.lv === 5) {
         spawnExplosion(b.x, b.y, 0.5, '#ffffff');
       }
       if (!b.pierce) { playerBullets.splice(j, 1); j--; }
