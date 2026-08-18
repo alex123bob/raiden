@@ -294,6 +294,7 @@ function createPlayer() {
     shootTimer: 0,
     dead: false,
     respawnTimer: 0,
+    gameOverTimer: undefined,
   };
 }
 
@@ -349,8 +350,13 @@ function drawPlayer(p) {
 function updatePlayer(dt) {
   const p = player;
   if (p.dead) {
-    p.respawnTimer -= dt;
-    if (p.respawnTimer <= 0) respawnPlayer();
+    if (p.gameOverTimer !== undefined) {
+      p.gameOverTimer -= dt;
+      if (p.gameOverTimer <= 0) state = STATE.GAMEOVER;
+    } else {
+      p.respawnTimer -= dt;
+      if (p.respawnTimer <= 0) respawnPlayer();
+    }
     return;
   }
   if (p.invTimer > 0) p.invTimer -= dt;
@@ -405,7 +411,7 @@ function killPlayer() {
   if (p.lives <= 0) {
     p.dead = true;
     saveHS();
-    setTimeout(() => { state = STATE.GAMEOVER; }, 1800);
+    p.gameOverTimer = 1.8;  // counted down in updatePlayer, not a setTimeout
   } else {
     p.dead = true;
     p.respawnTimer = 2.0;
@@ -1023,13 +1029,10 @@ function updateWaves(dt) {
     waveIndex++;
 
     if (entry.boss) {
-      // Wait for all regular enemies to be cleared before spawning boss
-      if (enemies.length > 0) {
-        waveIndex--;           // retry next tick
-        stageTimer = entry.t - 0.1;
-        break;
-      }
       // [ARCADE] Boss spawns only after all regular enemies are cleared
+      // Force-clear any remaining enemies (turrets may never scroll off)
+      enemies.length = 0;
+      enemyBullets.length = 0;
       boss = createBoss(entry.boss);
       bossSpawned = true;
     } else if (entry.type === 3) {
