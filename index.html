@@ -385,9 +385,48 @@ function updatePlayer(dt) {
   // [ARCADE] Fire rate controlled by weapon stat, not OS key-repeat (keydown/keyup map)
   laserActive = false;
   p.shootTimer -= dt;
-  if (keys['Space'] && p.shootTimer <= 0) {
-    p.shootTimer = getFireRate(p.weapon, p.weaponLv);
-    firePlayer(p);
+
+  if (p.weaponLv === 5) {
+    if (keys['Space']) {
+      if (!p.charging) p.charging = true;
+      p.chargeTime += dt;
+      if (p.chargeTime >= CHARGE_DURATION && !p.chargeFired) {
+        p.chargeFired = true;
+        fireSuper(p);
+        p.chargeTime  = 0;
+        p.charging    = false;
+        p.shootTimer  = 0.3;
+      }
+    } else {
+      if (p.charging) {
+        if (p.chargeTime >= CHARGE_DURATION && !p.chargeFired) {
+          fireSuper(p);
+          p.chargeTime  = 0;
+          p.charging    = false;
+          p.chargeFired = false;
+          p.shootTimer  = 0.3;
+        } else if (!p.chargeFired) {
+          if (p.shootTimer <= 0) {
+            p.shootTimer = getFireRate(p.weapon, p.weaponLv);
+            firePlayer(p);
+          }
+          p.chargeTime = 0;
+          p.charging   = false;
+        }
+      } else if (p.shootTimer <= 0) {
+        p.shootTimer = getFireRate(p.weapon, p.weaponLv);
+        firePlayer(p);
+      }
+      p.chargeFired = false;
+    }
+  } else {
+    p.chargeTime  = 0;
+    p.charging    = false;
+    p.chargeFired = false;
+    if (keys['Space'] && p.shootTimer <= 0) {
+      p.shootTimer = getFireRate(p.weapon, p.weaponLv);
+      firePlayer(p);
+    }
   }
 
   // Bomb — one activation per press (not hold)
