@@ -363,10 +363,18 @@ function updatePlayer(dt) {
   p.x = Math.max(p.r, Math.min(W - p.r, p.x));
   p.y = Math.max(p.r, Math.min(H - p.r, p.y));
   // [ARCADE] Fire rate controlled by weapon stat, not OS key-repeat (keydown/keyup map)
-  p.shootTimer -= dt;
-  if (keys['Space'] && p.shootTimer <= 0) {
-    p.shootTimer = getFireRate(p.weapon, p.weaponLv);
-    firePlayer(p);
+  if (p.weapon === 1) {
+    // Laser: continuous beam while Space held — no discrete bullets
+    const wasActive = laserActive;
+    laserActive = !p.dead && keys['Space'];
+    if (laserActive && !wasActive) sfxShoot(1); // play sound on activation
+  } else {
+    laserActive = false;
+    p.shootTimer -= dt;
+    if (keys['Space'] && p.shootTimer <= 0) {
+      p.shootTimer = getFireRate(p.weapon, p.weaponLv);
+      firePlayer(p);
+    }
   }
 
   // Bomb — one activation per press (not hold)
@@ -393,6 +401,7 @@ function killPlayer() {
   spawnExplosion(p.x, p.y, 3, '#88ccff');
   // [ARCADE] Player bullets cleared on death
   playerBullets.length = 0;
+  laserActive = false;
   if (p.lives <= 0) {
     p.dead = true;
     saveHS();
@@ -415,24 +424,30 @@ let playerBullets = [];
 
 // Returns seconds between shots for weapon/level combo
 function getFireRate(weapon, lv) {
-  if (weapon === 1) return 0.05;               // laser fires fast
+  if (weapon === 1) return 9999;               // laser is continuous beam — no discrete fire timer
   return Math.max(0.05, 0.13 - lv * 0.015);   // vulcan/missile
 }
 
-// Plain forward bullet (vulcan)
+// Elongated capsule pellet (vulcan) — looks like real arcade vulcan rounds
 function mkVulcanBullet(x, y, angle) {
-  const spd = 600;
+  const spd = 680;
   return {
     type: 'bullet',
     x, y,
     vx: Math.cos(angle) * spd,
     vy: Math.sin(angle) * spd,
+    // store angle for drawing the elongated capsule shape
+    angle,
     r: 4, dmg: 5, life: 2.0,
     pierce: false,
   };
 }
 
-// Called once per fire-rate tick when SPACE held
+// Persistent laser state — beam is drawn directly each frame when firing, not stored in playerBullets
+let laserActive  = false;   // true while space held with laser weapon
+let laserPulse   = 0;       // oscillates for shimmer effect
+
+// Called once per fire-rate tick when SPACE held (laser handled separately via laserActive flag)
 function firePlayer(p) {
   const lv = p.weaponLv;
   if (p.weapon === 0) {
@@ -447,21 +462,9 @@ function firePlayer(p) {
     if (lv >= 5) {
       playerBullets.push(mkVulcanBullet(p.x, p.y - 22, -Math.PI/2));
     }
-  } else if (p.weapon === 1) {
-    // Laser — piercing beam segment; widens and lengthens with level
-    playerBullets.push({
-      type: 'laser',
-      x: p.x, y: p.y - 20,
-      len: 80 + lv * 50,
-      w:   3  + lv * 2,
-      r:   6  + lv * 2,   // collision half-width treated as radius for hit test
-      dmg: 4 * lv,
-      life: 0.09,
-      pierce: true,
-    });
-  } else {
-    // Missile (Spread) — homing; count increases with level (2 → 5 at lv4+, capped at spec)
-    // Spec: missile count 2→5 across 5 levels
+    sfxShoot(0);
+  } else if (p.weapon === 2) {
+    // Missile (Spread) — homing; count increases with level (2 → 5 at lv4+)
     const counts = [2, 2, 3, 4, 5];
     const count  = counts[lv - 1];
     for (let i = 0; i < count; i++) {
@@ -475,18 +478,20 @@ function firePlayer(p) {
         pierce: false,
       });
     }
+    sfxShoot(2);
   }
-  sfxShoot(p.weapon);
 }
 
 function updatePlayerBullets(dt) {
+  // Update laser pulse for shimmer
+  laserPulse += dt * 12;
+
   for (let i = playerBullets.length - 1; i >= 0; i--) {
     const b = playerBullets[i];
     b.life -= dt;
     if (b.life <= 0 || b.y < -60 || b.x < -30 || b.x > W + 30) {
       playerBullets.splice(i, 1); continue;
     }
-    if (b.type === 'laser') continue; // laser is drawn at player position; no movement needed
     if (b.type === 'missile') {
       // Homing: after delay, steer toward nearest enemy/boss
       b.homingDelay -= dt;
@@ -514,21 +519,45 @@ function updatePlayerBullets(dt) {
   }
 }
 
+function drawLaserBeam(p) {
+  if (!laserActive || !p || p.dead) return;
+  const lv   = p.weaponLv;
+  const bx   = p.x;
+  const by   = p.y - 22;          // gun tip
+  const top  = -10;               // beam reaches top of screen
+  const w    = 4 + lv * 2.5;     // widens with level
+  const shimmer = 0.85 + Math.sin(laserPulse) * 0.15;
+
+  // Outer glow
+  const grad = ctx.createLinearGradient(bx, by, bx, top);
+  grad.addColorStop(0,   `rgba(0,255,255,${0.9 * shimmer})`);
+  grad.addColorStop(0.3, `rgba(0,200,255,${0.8 * shimmer})`);
+  grad.addColorStop(1,   `rgba(0,80,255,0)`);
+  ctx.strokeStyle = grad;
+  ctx.lineWidth   = w;
+  ctx.lineCap     = 'round';
+  ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, top); ctx.stroke();
+
+  // Bright core
+  ctx.strokeStyle = `rgba(255,255,255,${0.9 * shimmer})`;
+  ctx.lineWidth   = w * 0.22;
+  ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, top); ctx.stroke();
+
+  // Base flare at gun tip
+  const flareR = w * 0.8;
+  const flareGrad = ctx.createRadialGradient(bx, by, 0, bx, by, flareR * 2);
+  flareGrad.addColorStop(0, `rgba(255,255,255,0.9)`);
+  flareGrad.addColorStop(0.4, `rgba(0,255,255,0.6)`);
+  flareGrad.addColorStop(1, 'rgba(0,100,255,0)');
+  ctx.fillStyle = flareGrad;
+  ctx.beginPath(); ctx.arc(bx, by, flareR * 2, 0, Math.PI * 2); ctx.fill();
+
+  ctx.lineCap = 'butt';
+}
+
 function drawPlayerBullets() {
   playerBullets.forEach(b => {
-    if (b.type === 'laser') {
-      // Laser: vertical beam above player
-      const grad = ctx.createLinearGradient(b.x, b.y, b.x, b.y - b.len);
-      grad.addColorStop(0, 'rgba(0,255,255,0.95)');
-      grad.addColorStop(1, 'rgba(0,100,255,0)');
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = b.w;
-      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x, b.y - b.len); ctx.stroke();
-      // Core highlight
-      ctx.strokeStyle = 'rgba(255,255,255,0.65)';
-      ctx.lineWidth = b.w * 0.3;
-      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x, b.y - b.len); ctx.stroke();
-    } else if (b.type === 'missile') {
+    if (b.type === 'missile') {
       ctx.fillStyle = '#ff8800';
       ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI * 2); ctx.fill();
       // Exhaust trail
@@ -539,11 +568,17 @@ function drawPlayerBullets() {
       ctx.lineTo(b.x - b.vx * 0.012, b.y - b.vy * 0.012);
       ctx.stroke();
     } else {
-      // Vulcan bullet
-      ctx.fillStyle = '#ffff44';
-      ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,100,0.35)';
-      ctx.beginPath(); ctx.arc(b.x, b.y, 7, 0, Math.PI * 2); ctx.fill();
+      // Vulcan bullet — elongated capsule pellet, bright white/cyan core
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.angle !== undefined ? b.angle + Math.PI/2 : 0);
+      // Outer glow oval
+      ctx.fillStyle = 'rgba(100,220,255,0.5)';
+      ctx.beginPath(); ctx.ellipse(0, 0, 3, 8, 0, 0, Math.PI * 2); ctx.fill();
+      // Bright core
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(0, 0, 1.5, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     }
   });
 }
@@ -795,18 +830,33 @@ function circleHit(ax, ay, ar, bx, by, br) {
 }
 
 function checkPlayerBulletsVsEnemies() {
+  // Laser beam collision — active beam hits all enemies in its vertical column
+  if (laserActive && player && !player.dead) {
+    const lv   = player.weaponLv;
+    const bx   = player.x;
+    const bw   = 4 + lv * 2.5;   // beam half-width matches draw width
+    const dmg  = (4 * lv) * 0.016; // damage per frame (60fps → ~4*lv per tick total)
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      if (Math.abs(e.x - bx) < e.r + bw && e.y < player.y) {
+        e.hp -= dmg;
+        if (e.hp <= 0) {
+          score += e.score * loopMult;
+          saveHS();
+          spawnExplosion(e.x, e.y, e.type + 1, e.color);
+          tryDropPowerup(e);
+          enemies.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  // Regular bullets vs enemies
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
     for (let j = playerBullets.length - 1; j >= 0; j--) {
       const b = playerBullets[j];
-      let hit = false;
-      if (b.type === 'laser') {
-        // Laser occupies x ± b.r, y from b.y to b.y - b.len
-        if (Math.abs(e.x - b.x) < e.r + b.r &&
-            e.y > b.y - b.len - e.r && e.y < b.y + e.r) hit = true;
-      } else {
-        hit = circleHit(e.x, e.y, e.r, b.x, b.y, b.r);
-      }
+      const hit = circleHit(e.x, e.y, e.r, b.x, b.y, b.r);
       if (hit) {
         e.hp -= b.dmg;
         if (!b.pierce) { playerBullets.splice(j, 1); j--; }
@@ -845,15 +895,21 @@ function checkEnemyBodiesVsPlayer() {
 
 function checkPlayerBulletsVsBoss() {
   if (!boss) return;
+
+  // Laser beam vs boss
+  if (laserActive && player && !player.dead) {
+    const lv = player.weaponLv;
+    const bw = 4 + lv * 2.5;
+    const dmg = (4 * lv) * 0.016;
+    if (Math.abs(boss.x - player.x) < boss.r + bw && boss.y < player.y) {
+      boss.hp -= dmg;
+    }
+  }
+
+  // Regular bullets vs boss
   for (let j = playerBullets.length - 1; j >= 0; j--) {
     const b = playerBullets[j];
-    let hit = false;
-    if (b.type === 'laser') {
-      if (Math.abs(boss.x - b.x) < boss.r + b.r &&
-          boss.y > b.y - b.len - boss.r && boss.y < b.y + boss.r) hit = true;
-    } else {
-      hit = circleHit(boss.x, boss.y, boss.r, b.x, b.y, b.r);
-    }
+    const hit = circleHit(boss.x, boss.y, boss.r, b.x, b.y, b.r);
     if (hit) {
       boss.hp -= b.dmg;
       if (!b.pierce) { playerBullets.splice(j, 1); j--; }
@@ -1381,6 +1437,7 @@ function loop(ts) {
     drawPowerups();
     drawPlayerBullets();
     drawPlayer(player);
+    drawLaserBeam(player);   // drawn after player so beam appears from gun tip
     drawParticles();
     drawHUD();
     if (state === STATE.PAUSED)      drawPause();
