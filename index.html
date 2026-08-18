@@ -715,10 +715,6 @@ function updatePlayer(dt) {
       // Reset charge state
       p.chargeTime  = 0;
       p.charging    = false;
-    } else if (p.shootTimer <= 0) {
-      // Not charging (tap or released before any meaningful hold) → normal fire
-      p.shootTimer = getFireRate(p.weapons[0].type, p.weapons[0].lv);
-      firePlayer(p);
     }
     p.chargeFired = false;
   } else {
