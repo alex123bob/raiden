@@ -83,13 +83,20 @@ function handleKeyPress(code) {
     else if (state === STATE.PAUSED) state = STATE.PLAYING;
   }
   if (code === 'KeyS') {
-    if (state === STATE.TITLE || state === STATE.PAUSED || state === STATE.PLAYING)
+    if (settingsOpen) {
+      settingsOpen = false;
+    } else if (state === STATE.TITLE || state === STATE.PAUSED) {
       settingsOpen = true;
+    } else if (state === STATE.PLAYING) {
+      // Auto-pause so the game doesn't run under the settings panel
+      state = STATE.PAUSED;
+      settingsOpen = true;
+    }
   }
   if (code === 'Enter') {
-    if (state === STATE.TITLE)    startGame();
+    if (state === STATE.TITLE)    { loopMult = 1; startGame(); }
     if (state === STATE.GAMEOVER) state = STATE.TITLE;
-    if (state === STATE.VICTORY)  state = STATE.TITLE;
+    if (state === STATE.VICTORY)  { loopMult++; startGame(); }  // start loop 2+
   }
   if (code === 'KeyC' && state === STATE.GAMEOVER) {
     navigator.clipboard && navigator.clipboard.writeText(
@@ -403,6 +410,8 @@ function drawBackground(stage) {
   ctx.fillRect(0, 0, W, H);
 
   if (cfg.starColor) {
+    // Save current colors so the title screen's classic starfield isn't left tinted
+    const savedColors = STAR_LAYERS.map(l => l.color);
     STAR_LAYERS[0].color = cfg.starColor[0];
     STAR_LAYERS[1].color = cfg.starColor[1];
     STAR_LAYERS[2].color = cfg.starColor[2];
@@ -410,6 +419,7 @@ function drawBackground(stage) {
       ctx.fillStyle = layer.color;
       layer.stars.forEach(s => ctx.fillRect(s.x, s.y, layer.size, layer.size));
     });
+    STAR_LAYERS.forEach((l, i) => { l.color = savedColors[i]; });
   }
 
   if (stage === 2) {
@@ -689,38 +699,28 @@ function updatePlayer(dt) {
   p.shootTimer -= dt;
 
   if (p.weapons[0].lv === 5) {
+    // Hold-to-charge, release-to-fire super-shot (lv5 only)
     if (keys['Space']) {
-      if (!p.charging) p.charging = true;
-      p.chargeTime += dt;
-      if (p.chargeTime >= CHARGE_DURATION && !p.chargeFired) {
-        p.chargeFired = true;
-        fireSuper(p);
-        p.chargeTime  = 0;
-        p.charging    = false;
-        p.shootTimer  = 0.3;
-      }
-    } else {
-      if (p.charging) {
-        if (p.chargeTime >= CHARGE_DURATION && !p.chargeFired) {
-          fireSuper(p);
-          p.chargeTime  = 0;
-          p.charging    = false;
-          p.chargeFired = false;
-          p.shootTimer  = 0.3;
-        } else if (!p.chargeFired) {
-          if (p.shootTimer <= 0) {
-            p.shootTimer = getFireRate(p.weapons[0].type, p.weapons[0].lv);
-            firePlayer(p);
-          }
-          p.chargeTime = 0;
-          p.charging   = false;
-        }
+      p.charging = true;
+      p.chargeTime = Math.min(CHARGE_DURATION, p.chargeTime + dt); // cap at full
+    } else if (p.charging) {
+      // Space released after charging
+      if (p.chargeTime >= CHARGE_DURATION) {
+        fireSuper(p);            // full charge → super-shot
+        p.shootTimer = 0.3;      // brief cooldown after super
       } else if (p.shootTimer <= 0) {
         p.shootTimer = getFireRate(p.weapons[0].type, p.weapons[0].lv);
-        firePlayer(p);
+        firePlayer(p);           // partial charge → single normal volley
       }
-      p.chargeFired = false;
+      // Reset charge state
+      p.chargeTime  = 0;
+      p.charging    = false;
+    } else if (p.shootTimer <= 0) {
+      // Not charging (tap or released before any meaningful hold) → normal fire
+      p.shootTimer = getFireRate(p.weapons[0].type, p.weapons[0].lv);
+      firePlayer(p);
     }
+    p.chargeFired = false;
   } else {
     p.chargeTime  = 0;
     p.charging    = false;
@@ -1187,15 +1187,14 @@ function fireEnemy(e) {
         mkEB(Math.cos(ang)*spd*0.75, Math.sin(ang)*spd*0.75, '#ffcc00');
       }
       break;
-    case 3: // aimed burst — 3 shots with slight speed variation
+    case 3: // aimed burst — 3 shots with slight speed variation + staggered spawn delay
       for (let j = 0; j < 3; j++) {
         const ang  = Math.atan2(dy, dx);
         const bspd = spd * (0.85 + j * 0.1);
-        // delay each shot by 80 ms for burst feel
-        setTimeout(() => {
-          if (state !== STATE.PLAYING) return;
-          mkEB(Math.cos(ang)*bspd, Math.sin(ang)*bspd, '#ff66ff');
-        }, j * 80);
+        // delay each shot by 80 ms (respected by gameSpeed and bomb-clear via delay field)
+        enemyBullets.push({ x: e.x, y: e.y,
+          vx: Math.cos(ang)*bspd, vy: Math.sin(ang)*bspd,
+          r: 4, clr: '#ff66ff', delay: j * 0.08 });
       }
       break;
   }
@@ -1233,6 +1232,12 @@ let enemyBullets = [];
 function updateEnemyBullets(dt) {
   for (let i = enemyBullets.length - 1; i >= 0; i--) {
     const b = enemyBullets[i];
+    // Delayed spawn (turret burst) — count down before the bullet becomes active
+    if (b.delay) {
+      b.delay -= dt;
+      if (b.delay <= 0) delete b.delay;
+      else continue;
+    }
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     if (b.y > H + 20 || b.y < -20 || b.x < -20 || b.x > W + 20) {
@@ -2412,7 +2417,6 @@ function drawVictory() {
 
 function startGame() {
   score     = 0;
-  loopMult  = 1;
   player    = createPlayer();
   particles.length = 0;
   powerups.length  = 0;
@@ -2430,8 +2434,8 @@ function loop(ts) {
   const dt = rawDt * gameSpeed;
 
   // Update
-  updateStars(dt);
-  if (state === STATE.PLAYING || state === STATE.STAGECLEAR || state === STATE.PAUSED) updateBackground(dt);
+  if (state !== STATE.PAUSED) updateStars(dt);
+  if (state === STATE.PLAYING || state === STATE.STAGECLEAR) updateBackground(dt);
   if (state === STATE.PLAYING || state === STATE.STAGECLEAR) updateParticles(dt);
   if (state === STATE.STAGECLEAR) updateStageClear(dt);
   if (state === STATE.VICTORY) updateVictory(dt);
