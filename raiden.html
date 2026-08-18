@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RAIDEN</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+  canvas { display: block; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+'use strict';
+
+// === CONSTANTS & CONFIG ===
+const W = 480, H = 640;
+const FPS = 60;
+const STEP = 1 / FPS;
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+canvas.width = W;
+canvas.height = H;
+
+function resize() {
+  const scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+  canvas.style.width  = (W * scale) + 'px';
+  canvas.style.height = (H * scale) + 'px';
+}
+window.addEventListener('resize', resize);
+resize();
+
+// === BOOTSTRAP ===
+// placeholder — just clear to dark blue to verify canvas works
+ctx.fillStyle = '#020208';
+ctx.fillRect(0, 0, W, H);
+ctx.fillStyle = '#fff';
+ctx.font = '20px monospace';
+ctx.textAlign = 'center';
+ctx.fillText('RAIDEN scaffold OK', W/2, H/2);
+</script>
+</body>
+</html>
