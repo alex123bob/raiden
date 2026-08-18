@@ -89,6 +89,7 @@ function handleKeyPress(code) {
   if (code === 'Enter') {
     if (state === STATE.TITLE)    startGame();
     if (state === STATE.GAMEOVER) state = STATE.TITLE;
+    if (state === STATE.VICTORY)  state = STATE.TITLE;
   }
   if (code === 'KeyC' && state === STATE.GAMEOVER) {
     navigator.clipboard && navigator.clipboard.writeText(
@@ -1700,9 +1701,7 @@ function startStage(stage) {
 function updateStageClear(dt) {
   stageClearTimer -= dt;
   if (stageClearTimer <= 0) {
-    // Transition to stage 2 with increased difficulty (per spec)
-    diffMult = 1.0 + (loopMult - 1) * 0.35 + 0.4;
-    startStage(2);
+    startStage(currentStage + 1);
     state = STATE.PLAYING;
   }
 }
@@ -1864,24 +1863,33 @@ function updateBoss(dt) {
 }
 
 function onBossDeath() {
+  const bossStage = boss.stageNum || boss.num || 1;
+  const explosionCount = 2 + Math.floor(bossStage * 0.5);
   spawnExplosion(boss.x,      boss.y,      6, '#ffaa00');
   spawnExplosion(boss.x + 35, boss.y - 25, 4, '#ff4400');
   spawnExplosion(boss.x - 35, boss.y + 15, 4, '#ffcc00');
-  const bossNum = boss.num;
-  score += (bossNum === 1 ? 5000 : 10000) * loopMult;
+  for (let i = 0; i < explosionCount - 3; i++) {
+    const ox = (Math.random() - 0.5) * boss.r * 2;
+    const oy = (Math.random() - 0.5) * boss.r * 2;
+    spawnExplosion(boss.x + ox, boss.y + oy, 3, '#ff8800');
+  }
+  const bossScore = 5000 + bossStage * 2000;
+  score += bossScore * loopMult;
   saveHS();
   boss = null;
 
-  if (bossNum === 1) {
-    // Stage clear transition
+  if (currentStage < STAGE_COUNT) {
     state = STATE.STAGECLEAR;
     stageClearTimer = 3.0;
   } else {
-    // [ARCADE] Loop: after Boss 2, stage 1 restarts with cumulative difficulty multiplier
-    loopMult++;
-    diffMult = 1.0 + (loopMult - 1) * 0.35 + 0.4;
-    startStage(1);
-    state = STATE.PLAYING;
+    if (loopMult === 1) {
+      state = STATE.VICTORY;
+      victoryTimer = 0;
+    } else {
+      loopMult++;
+      startStage(1);
+      state = STATE.PLAYING;
+    }
   }
 }
 
@@ -2023,10 +2031,34 @@ function drawStageClear() {
   ctx.shadowColor = 'transparent';
   ctx.fillStyle = '#fff';
   ctx.font = '16px monospace';
-  ctx.fillText('STAGE 2 INCOMING...', W/2, H/2 + 30);
+  ctx.fillText('STAGE ' + (currentStage + 1) + ' INCOMING...', W/2, H/2 + 30);
 }
 
 // === STATE MACHINE — startGame stub ===
+function updateVictory(dt) { /* victory stays until Enter */ }
+
+function drawVictory() {
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.shadowColor = '#ffcc00';
+  ctx.shadowBlur  = 40;
+  ctx.fillStyle   = '#ffd700';
+  ctx.font = 'bold 42px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('MISSION', W/2, H/2 - 70);
+  ctx.fillText('COMPLETE', W/2, H/2 - 22);
+  ctx.shadowBlur  = 0;
+  ctx.shadowColor = 'transparent';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '18px monospace';
+  ctx.fillText('SCORE: ' + score, W/2, H/2 + 30);
+  ctx.fillText('HI-SCORE: ' + highScore, W/2, H/2 + 58);
+  ctx.fillStyle = '#ffff44';
+  ctx.font = '14px monospace';
+  if (Math.floor(Date.now() / 500) % 2)
+    ctx.fillText('PRESS ENTER', W/2, H/2 + 100);
+}
+
 function startGame() {
   score     = 0;
   loopMult  = 1;
@@ -2051,6 +2083,7 @@ function loop(ts) {
   if (state === STATE.PLAYING || state === STATE.STAGECLEAR || state === STATE.PAUSED) updateBackground(dt);
   if (state === STATE.PLAYING || state === STATE.STAGECLEAR) updateParticles(dt);
   if (state === STATE.STAGECLEAR) updateStageClear(dt);
+  if (state === STATE.VICTORY) updateVictory(dt);
   if (state === STATE.PLAYING) {
     updatePlayer(dt);
     updatePlayerBullets(dt);
@@ -2077,6 +2110,7 @@ function loop(ts) {
 
   if (state === STATE.TITLE)         drawTitle();
   else if (state === STATE.GAMEOVER) drawGameOver();
+  else if (state === STATE.VICTORY)  drawVictory();
   else {
     enemies.forEach(drawEnemy);
     drawBoss();
