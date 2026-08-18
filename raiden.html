@@ -278,6 +278,123 @@ function drawParticles() {
   ctx.globalAlpha = 1;
 }
 
+// === PLAYER ===
+let player = null;
+
+function createPlayer() {
+  return {
+    x: W / 2, y: H - 100,
+    r: 14,            // collision radius
+    speed: 280,       // px/s — tuned to arcade feel
+    lives: 3,
+    bombs: 3,
+    invTimer: 0,      // seconds of invincibility remaining
+    weapon: 0,        // 0=vulcan 1=laser 2=missile
+    weaponLv: 1,
+    shootTimer: 0,
+    dead: false,
+    respawnTimer: 0,
+  };
+}
+
+function drawPlayer(p) {
+  if (p.dead) return;
+  // Flicker during invincibility: hide on odd 10ths of a second
+  if (p.invTimer > 0 && Math.floor(p.invTimer * 10) % 2 === 0) return;
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+
+  // Engine glow
+  const glow = ctx.createRadialGradient(0, 10, 0, 0, 10, 18);
+  glow.addColorStop(0, 'rgba(0,180,255,0.85)');
+  glow.addColorStop(1, 'rgba(0,80,200,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(0, 10, 18, 0, Math.PI * 2); ctx.fill();
+
+  // Left wing
+  ctx.fillStyle = '#4488cc';
+  ctx.beginPath();
+  ctx.moveTo(-22, 10); ctx.lineTo(-8, -2); ctx.lineTo(-6, 14); ctx.closePath();
+  ctx.fill();
+  // Right wing
+  ctx.beginPath();
+  ctx.moveTo(22, 10); ctx.lineTo(8, -2); ctx.lineTo(6, 14); ctx.closePath();
+  ctx.fill();
+
+  // Fuselage
+  ctx.fillStyle = '#88bbee';
+  ctx.beginPath();
+  ctx.moveTo(0, -22);
+  ctx.lineTo(12, 10); ctx.lineTo(8, 18);
+  ctx.lineTo(-8, 18); ctx.lineTo(-12, 10);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cockpit
+  ctx.fillStyle = '#ccffff';
+  ctx.beginPath();
+  ctx.ellipse(0, -8, 5, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wing accent lines
+  ctx.strokeStyle = '#aaddff';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-20, 8); ctx.lineTo(-8, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(20, 8);  ctx.lineTo(8, 0);  ctx.stroke();
+
+  ctx.restore();
+}
+
+function updatePlayer(dt) {
+  const p = player;
+  if (p.dead) {
+    p.respawnTimer -= dt;
+    if (p.respawnTimer <= 0) respawnPlayer();
+    return;
+  }
+  if (p.invTimer > 0) p.invTimer -= dt;
+
+  const spd = p.speed * dt;
+  if (keys['ArrowLeft'])  p.x -= spd;
+  if (keys['ArrowRight']) p.x += spd;
+  if (keys['ArrowUp'])    p.y -= spd;
+  if (keys['ArrowDown'])  p.y += spd;
+  p.x = Math.max(p.r, Math.min(W - p.r, p.x));
+  p.y = Math.max(p.r, Math.min(H - p.r, p.y));
+  // Shoot and bomb logic will be added in Task 6
+}
+
+function killPlayer() {
+  const p = player;
+  if (p.invTimer > 0 || p.dead) return;
+  p.lives--;
+  spawnExplosion(p.x, p.y, 3, '#88ccff');
+  // [ARCADE] Player bullets cleared on death
+  playerBullets.length = 0;
+  if (p.lives <= 0) {
+    p.dead = true;
+    saveHS();
+    setTimeout(() => { state = STATE.GAMEOVER; }, 1800);
+  } else {
+    p.dead = true;
+    p.respawnTimer = 2.0;
+  }
+}
+
+function respawnPlayer() {
+  const p = player;
+  p.dead = false;
+  p.x = W / 2; p.y = H - 100;
+  p.invTimer = 3.0;
+}
+
+// === PLAYER BULLETS ===
+let playerBullets = [];
+
+// === ENEMY BULLETS ===
+let enemyBullets = [];
+
 // === HUD & SCREENS ===
 function drawTitle() {
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -382,6 +499,10 @@ function drawStageClear() {
 // === STATE MACHINE — startGame stub ===
 function startGame() {
   score = 0;
+  player = createPlayer();
+  particles.length = 0;
+  playerBullets.length = 0;
+  enemyBullets.length = 0;
   state = STATE.PLAYING;
 }
 
@@ -397,6 +518,7 @@ function loop(ts) {
   // Update
   updateStars(dt);
   if (state === STATE.PLAYING || state === STATE.STAGECLEAR) updateParticles(dt);
+  if (state === STATE.PLAYING) updatePlayer(dt);
 
   // Render
   ctx.fillStyle = '#020208';
@@ -408,12 +530,8 @@ function loop(ts) {
 
   if (state === STATE.TITLE)    drawTitle();
   else if (state === STATE.GAMEOVER) drawGameOver();
-  else {
-    // placeholder playing/paused frame
-    ctx.fillStyle = '#fff';
-    ctx.font = '20px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('PLAYING (stub)', W/2, H/2);
+  } else {
+    drawPlayer(player);
     drawParticles();
     if (state === STATE.PAUSED) drawPause();
     if (state === STATE.STAGECLEAR) drawStageClear();
