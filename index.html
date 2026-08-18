@@ -43,7 +43,7 @@ window.addEventListener('resize', resize);
 resize();
 
 // === STATE MACHINE ===
-const STATE = { TITLE: 0, PLAYING: 1, PAUSED: 2, GAMEOVER: 3, STAGECLEAR: 4 };
+const STATE = { TITLE: 0, PLAYING: 1, PAUSED: 2, GAMEOVER: 3, STAGECLEAR: 4, VICTORY: 5 };
 let state = STATE.TITLE;
 let settingsOpen = false;
 
@@ -1713,6 +1713,7 @@ let bossPhase  = 0;
 let bossTimer  = 0;
 let bossAngle  = 0;   // rotating arms angle
 let stageClearTimer = 0;
+let victoryTimer = 0;
 
 function createBoss(num) {
   // Boss 2 has more HP and an extra attack phase (per spec)
