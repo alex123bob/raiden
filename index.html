@@ -258,7 +258,7 @@ function initBackground(stage) {
   bgStreaks.length = 0; bgHulls.length = 0; bgWisps.length = 0;
   bgParticles.length = 0; bgWalls.length = 0;
 
-  if (stage === 1 || stage === 6) return; // stars only
+  if (stage === 1) return; // stars only — stage 6 has hulls too
 
   if (stage === 2) {
     for (let i = 0; i < 14; i++) {
@@ -302,6 +302,20 @@ function initBackground(stage) {
         w: 40+Math.random()*80, h: 1+Math.floor(Math.random()*2),
         spd: 300+Math.random()*200, alpha: 0.18+Math.random()*0.25,
         color: Math.random()<0.7 ? '#ff8800' : '#ffcc44' });
+    }
+    return;
+  }
+
+  if (stage === 6) {
+    for (let i = 0; i < 10; i++) {
+      bgHulls.push({
+        x: Math.random() * (W - 120),
+        y: Math.random() * H,
+        w: 60 + Math.random() * 60,
+        h: 12 + Math.random() * 14,
+        spd: 25 + Math.random() * 15,
+        alpha: 0.18 + Math.random() * 0.12,
+      });
     }
     return;
   }
