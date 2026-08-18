@@ -723,6 +723,96 @@ function drawEnemyBullets() {
   });
 }
 
+// === COLLISION ===
+function circleHit(ax, ay, ar, bx, by, br) {
+  const dx = ax - bx, dy = ay - by;
+  return dx*dx + dy*dy < (ar + br) * (ar + br);
+}
+
+function checkPlayerBulletsVsEnemies() {
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    for (let j = playerBullets.length - 1; j >= 0; j--) {
+      const b = playerBullets[j];
+      let hit = false;
+      if (b.type === 'laser') {
+        // Laser occupies x ± b.r, y from b.y to b.y - b.len
+        if (Math.abs(e.x - b.x) < e.r + b.r &&
+            e.y > b.y - b.len - e.r && e.y < b.y + e.r) hit = true;
+      } else {
+        hit = circleHit(e.x, e.y, e.r, b.x, b.y, b.r);
+      }
+      if (hit) {
+        e.hp -= b.dmg;
+        if (!b.pierce) { playerBullets.splice(j, 1); j--; }
+      }
+    }
+    if (e.hp <= 0) {
+      score += e.score * loopMult;
+      saveHS();
+      spawnExplosion(e.x, e.y, e.type + 1, e.color);
+      if (typeof tryDropPowerup === 'function') tryDropPowerup(e);   // defined in Task 9
+      enemies.splice(i, 1);
+    }
+  }
+}
+
+function checkEnemyBulletsVsPlayer() {
+  if (!player || player.dead || player.invTimer > 0) return;
+  for (let i = enemyBullets.length - 1; i >= 0; i--) {
+    const b = enemyBullets[i];
+    if (circleHit(b.x, b.y, b.r, player.x, player.y, player.r)) {
+      enemyBullets.splice(i, 1);
+      killPlayer();
+      return; // one hit per frame
+    }
+  }
+}
+
+function checkEnemyBodiesVsPlayer() {
+  if (!player || player.dead || player.invTimer > 0) return;
+  enemies.forEach(e => {
+    if (circleHit(e.x, e.y, e.r, player.x, player.y, player.r)) {
+      killPlayer();
+    }
+  });
+}
+
+function checkPlayerBulletsVsBoss() {
+  if (!boss) return;
+  for (let j = playerBullets.length - 1; j >= 0; j--) {
+    const b = playerBullets[j];
+    let hit = false;
+    if (b.type === 'laser') {
+      if (Math.abs(boss.x - b.x) < boss.r + b.r &&
+          boss.y > b.y - b.len - boss.r && boss.y < b.y + boss.r) hit = true;
+    } else {
+      hit = circleHit(boss.x, boss.y, boss.r, b.x, b.y, b.r);
+    }
+    if (hit) {
+      boss.hp -= b.dmg;
+      if (!b.pierce) { playerBullets.splice(j, 1); j--; }
+    }
+  }
+  if (boss && boss.hp <= 0 && typeof onBossDeath === 'function') onBossDeath(); // defined in Task 11
+}
+
+function checkBossBodyVsPlayer() {
+  if (!boss || !player || player.dead || player.invTimer > 0) return;
+  if (circleHit(boss.x, boss.y, boss.r, player.x, player.y, player.r)) {
+    killPlayer();
+  }
+}
+
+function runCollision() {
+  checkPlayerBulletsVsEnemies();
+  checkEnemyBulletsVsPlayer();
+  checkEnemyBodiesVsPlayer();
+  checkPlayerBulletsVsBoss();
+  checkBossBodyVsPlayer();
+  if (typeof checkPlayerVsPowerups === 'function') checkPlayerVsPowerups(); // Task 9
+}
+
 // === HUD & SCREENS ===
 function drawTitle() {
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -854,6 +944,7 @@ function loop(ts) {
   if (state === STATE.PLAYING) updatePlayerBullets(dt);
   if (state === STATE.PLAYING) updateEnemies(dt);
   if (state === STATE.PLAYING) updateEnemyBullets(dt);
+  if (state === STATE.PLAYING) runCollision();
 
   // Render
   ctx.fillStyle = '#020208';
