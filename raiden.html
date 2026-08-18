@@ -878,6 +878,136 @@ function runCollision() {
   if (typeof checkPlayerVsPowerups === 'function') checkPlayerVsPowerups(); // Task 9
 }
 
+// === WAVE TABLES ===
+// Path functions return {x, y} given elapsed time t (seconds)
+
+function pathDown(sx, sy, spd) {
+  return t => ({ x: sx, y: sy + t * spd });
+}
+
+function pathSin(sx, sy, spd, amp, freq) {
+  return t => ({ x: sx + Math.sin(t * freq) * amp, y: sy + t * spd });
+}
+
+// Formation: N ships evenly spaced horizontally, centered on cx
+function pathFormation(cx, sy, spd, idx, total) {
+  const offset = (idx - (total - 1) / 2) * 36;
+  return t => ({ x: cx + offset, y: sy + t * spd });
+}
+
+// Returns array of spawn entries sorted by trigger time t
+function buildWaveTable(stage) {
+  const fSpd = (stage === 1 ? 105 : 145) * diffMult; // fighter speed
+  const bSpd = (stage === 1 ?  62 : 88)  * diffMult; // gunship/bomber speed
+  const entries = [];
+  const add = obj => entries.push(obj);
+
+  // t=0.5  Fighter line (5 fighters) — straight down formation
+  for (let i = 0; i < 5; i++)
+    add({ t: 0.5 + i*0.28, type: 0, path: pathFormation(W/2, -20, fSpd, i, 5) });
+
+  // t=3.5  Gunship pair from left and right flanks
+  add({ t: 3.5, type: 1, path: pathDown(W*0.25, -30, bSpd) });
+  add({ t: 3.5, type: 1, path: pathDown(W*0.75, -30, bSpd) });
+
+  // t=5.5  Sinusoidal fighter wave (4 ships)
+  for (let i = 0; i < 4; i++)
+    add({ t: 5.5 + i*0.35, type: 0, path: pathSin(W*0.18 + i*90, -20, fSpd*0.9, 45, 1.6) });
+
+  // t=8    Turret cluster (3 ground turrets — stationary)
+  add({ t: 8, type: 3, x: 80,  y: 290 });
+  add({ t: 8, type: 3, x: 240, y: 240 });
+  add({ t: 8, type: 3, x: 400, y: 290 });
+
+  // t=10   First bomber passes through
+  add({ t: 10, type: 2, path: pathDown(W/2, -40, 44 * diffMult) });
+
+  // t=12   Large fighter sweep (6 ships)
+  for (let i = 0; i < 6; i++)
+    add({ t: 12 + i*0.22, type: 0, path: pathFormation(W/2, -20, fSpd*1.15, i, 6) });
+
+  // t=14   Gunship sinusoidal
+  add({ t: 14, type: 1, path: pathSin(W*0.5, -30, bSpd, 65, 1.9) });
+
+  // t=17   Three gunship columns
+  for (let i = 0; i < 3; i++)
+    add({ t: 17 + i*1.4, type: 1, path: pathDown(80 + i*160, -30, bSpd) });
+
+  // t=20   Two turrets
+  add({ t: 20, type: 3, x: 150, y: 200 });
+  add({ t: 20, type: 3, x: 330, y: 215 });
+
+  // t=22   Two bombers side by side
+  add({ t: 22, type: 2, path: pathDown(W*0.33, -40, 40*diffMult) });
+  add({ t: 22, type: 2, path: pathDown(W*0.67, -40, 40*diffMult) });
+
+  // t=26   Final fighter rush before boss
+  for (let i = 0; i < 8; i++)
+    add({ t: 26 + i*0.18, type: 0, path: pathFormation(W/2, -20, fSpd*1.3, i, 8) });
+
+  // t=30   Boss spawns
+  add({ t: 30, boss: stage });
+
+  return entries.sort((a, b) => a.t - b.t);
+}
+
+let waveTable    = [];
+let waveIndex    = 0;
+let stageTimer   = 0;
+let currentStage = 1;
+let bossSpawned  = false;
+
+function updateWaves(dt) {
+  if (boss) return; // don't advance wave clock while boss is alive
+  stageTimer += dt;
+
+  while (waveIndex < waveTable.length) {
+    const entry = waveTable[waveIndex];
+    if (stageTimer < entry.t) break;
+    waveIndex++;
+
+    if (entry.boss) {
+      // Wait for all regular enemies to be cleared before spawning boss
+      if (enemies.length > 0) {
+        waveIndex--;           // retry next tick
+        stageTimer = entry.t - 0.1;
+        break;
+      }
+      boss = createBoss(entry.boss);
+      bossSpawned = true;
+    } else if (entry.type === 3) {
+      enemies.push(mkEnemy(3, entry.x, entry.y, null));
+    } else {
+      const e = mkEnemy(entry.type, 0, 0, entry.path);
+      if (entry.path) { const p0 = entry.path(0); e.x = p0.x; e.y = p0.y; }
+      enemies.push(e);
+    }
+  }
+}
+
+function startStage(stage) {
+  currentStage  = stage;
+  waveTable     = buildWaveTable(stage);
+  waveIndex     = 0;
+  stageTimer    = 0;
+  bossSpawned   = false;
+  boss          = null;
+  enemies.length       = 0;
+  enemyBullets.length  = 0;
+  playerBullets.length = 0;
+  powerups.length      = 0;
+}
+
+function updateStageClear(dt) {
+  stageClearTimer -= dt;
+  if (stageClearTimer <= 0) {
+    // Transition to stage 2 with increased difficulty (per spec)
+    diffMult = 1.0 + (loopMult - 1) * 0.35 + 0.4;
+    startStage(2);
+    state = STATE.PLAYING;
+  }
+}
+
 // === BOSS ===
 let bossMaxHp  = 0;
 let bossPhase  = 0;
@@ -1199,16 +1329,13 @@ function drawStageClear() {
 
 // === STATE MACHINE — startGame stub ===
 function startGame() {
-  score = 0;
-  loopMult = 1;
-  diffMult = 1.0;
-  player = createPlayer();
+  score     = 0;
+  loopMult  = 1;
+  diffMult  = 1.0;
+  player    = createPlayer();
   particles.length = 0;
-  playerBullets.length = 0;
-  enemyBullets.length = 0;
-  enemies.length = 0;
-  powerups.length = 0;
-  boss = null;
+  powerups.length  = 0;
+  startStage(1);
   state = STATE.PLAYING;
 }
 
@@ -1224,13 +1351,17 @@ function loop(ts) {
   // Update
   updateStars(dt);
   if (state === STATE.PLAYING || state === STATE.STAGECLEAR) updateParticles(dt);
-  if (state === STATE.PLAYING) updatePlayer(dt);
-  if (state === STATE.PLAYING) updatePlayerBullets(dt);
-  if (state === STATE.PLAYING) updateEnemies(dt);
-  if (state === STATE.PLAYING) updateEnemyBullets(dt);
-  if (state === STATE.PLAYING) runCollision();
-  if (state === STATE.PLAYING) updatePowerups(dt);
-  if (state === STATE.PLAYING) updateBoss(dt);
+  if (state === STATE.STAGECLEAR) updateStageClear(dt);
+  if (state === STATE.PLAYING) {
+    updatePlayer(dt);
+    updatePlayerBullets(dt);
+    updateEnemies(dt);
+    updateEnemyBullets(dt);
+    runCollision();
+    updatePowerups(dt);
+    updateBoss(dt);
+    updateWaves(dt);
+  }
 
 
   // Render
