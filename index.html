@@ -452,6 +452,7 @@ function mkVulcanBullet(x, y, angle) {
     angle,
     r: 4, dmg: 5, life: 2.0,
     pierce: false,
+    trail: [],
   };
 }
 
@@ -554,6 +555,11 @@ function updatePlayerBullets(dt) {
       }
       b.x += b.vx * dt; b.y += b.vy * dt;
     } else {
+      // Record trail before moving
+      if (b.trail) {
+        b.trail.unshift({ x: b.x, y: b.y });
+        if (b.trail.length > 5) b.trail.length = 5;
+      }
       b.x += b.vx * dt; b.y += b.vy * dt;
     }
   }
@@ -596,14 +602,31 @@ function drawPlayerBullets() {
       ctx.lineTo(b.x - b.vx * 0.012, b.y - b.vy * 0.012);
       ctx.stroke();
     } else {
-      // Vulcan bullet — elongated capsule pellet, bright white/cyan core
+      // Vulcan bullet — draw trail for lv3+, then capsule
+      if (b.trail && b.trail.length > 0 && player && player.weaponLv >= 3) {
+        const trailLen = player.weaponLv >= 4 ? 5 : 3;
+        const pts = b.trail.slice(0, trailLen);
+        for (let t = 0; t < pts.length; t++) {
+          const alpha = (1 - (t + 1) / (trailLen + 1)) * 0.55;
+          ctx.strokeStyle = `rgba(200,240,255,${alpha})`;
+          ctx.lineWidth = Math.max(0.5, 2.5 - t * 0.4);
+          ctx.beginPath();
+          if (t === 0) {
+            ctx.moveTo(b.x, b.y);
+            ctx.lineTo(pts[t].x, pts[t].y);
+          } else {
+            ctx.moveTo(pts[t - 1].x, pts[t - 1].y);
+            ctx.lineTo(pts[t].x, pts[t].y);
+          }
+          ctx.stroke();
+        }
+      }
+      // Capsule
       ctx.save();
       ctx.translate(b.x, b.y);
       ctx.rotate(b.angle !== undefined ? b.angle + Math.PI/2 : 0);
-      // Outer glow oval
       ctx.fillStyle = 'rgba(100,220,255,0.5)';
       ctx.beginPath(); ctx.ellipse(0, 0, 3, 8, 0, 0, Math.PI * 2); ctx.fill();
-      // Bright core
       ctx.fillStyle = '#ffffff';
       ctx.beginPath(); ctx.ellipse(0, 0, 1.5, 5, 0, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
@@ -865,6 +888,9 @@ function checkPlayerBulletsVsEnemies() {
       const b = playerBullets[j];
       if (circleHit(e.x, e.y, e.r, b.x, b.y, b.r)) {
         e.hp -= b.dmg;
+        if (b.type === 'bullet' && player && player.weaponLv === 5) {
+          spawnExplosion(b.x, b.y, 0.5, '#ffffff');
+        }
         if (!b.pierce) { playerBullets.splice(j, 1); j--; }
       }
     }
@@ -907,6 +933,9 @@ function checkPlayerBulletsVsBoss() {
     const b = playerBullets[j];
     if (circleHit(boss.x, boss.y, boss.r, b.x, b.y, b.r)) {
       boss.hp -= b.dmg;
+      if (b.type === 'bullet' && player && player.weaponLv === 5) {
+        spawnExplosion(b.x, b.y, 0.5, '#ffffff');
+      }
       if (!b.pierce) { playerBullets.splice(j, 1); j--; }
     }
   }
