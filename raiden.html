@@ -528,13 +528,13 @@ function loop(ts) {
   ctx.shadowColor = 'transparent';
   drawStars();
 
-  if (state === STATE.TITLE)    drawTitle();
+  if (state === STATE.TITLE)         drawTitle();
   else if (state === STATE.GAMEOVER) drawGameOver();
-  } else {
+  else {
     drawPlayer(player);
     drawParticles();
-    if (state === STATE.PAUSED) drawPause();
-    if (state === STATE.STAGECLEAR) drawStageClear();
+    if (state === STATE.PAUSED)      drawPause();
+    if (state === STATE.STAGECLEAR)  drawStageClear();
   }
   if (settingsOpen) drawSettings();
 }
