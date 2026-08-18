@@ -39,14 +39,234 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+// === STATE MACHINE ===
+const STATE = { TITLE: 0, PLAYING: 1, PAUSED: 2, GAMEOVER: 3, STAGECLEAR: 4 };
+let state = STATE.TITLE;
+let settingsOpen = false;
+
+// Settings
+let soundOn = true;
+let gameSpeed = 1.0;
+const SPEED_STEPS = [0.75, 1.0, 1.25];
+
+// Score / persistence
+let score = 0;
+let highScore = parseInt(localStorage.getItem('raidenHS') || '0');
+function saveHS() {
+  if (score > highScore) { highScore = score; localStorage.setItem('raidenHS', highScore); }
+}
+
+// === INPUT ===
+const keys = {};
+document.addEventListener('keydown', e => {
+  if (!keys[e.code]) {
+    keys[e.code] = true;
+    handleKeyPress(e.code);
+  }
+  e.preventDefault();
+}, { passive: false });
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+function handleKeyPress(code) {
+  if (settingsOpen) {
+    if (code === 'KeyM')        soundOn = !soundOn;
+    if (code === 'BracketLeft') cycleSpeed(-1);
+    if (code === 'BracketRight')cycleSpeed(1);
+    if (code === 'KeyS')        settingsOpen = false;
+    return;
+  }
+  if (code === 'KeyP') {
+    if (state === STATE.PLAYING) state = STATE.PAUSED;
+    else if (state === STATE.PAUSED) state = STATE.PLAYING;
+  }
+  if (code === 'KeyS') {
+    if (state === STATE.TITLE || state === STATE.PAUSED || state === STATE.PLAYING)
+      settingsOpen = true;
+  }
+  if (code === 'Enter') {
+    if (state === STATE.TITLE)    startGame();
+    if (state === STATE.GAMEOVER) state = STATE.TITLE;
+  }
+}
+
+function cycleSpeed(dir) {
+  let i = SPEED_STEPS.indexOf(gameSpeed);
+  i = Math.max(0, Math.min(SPEED_STEPS.length - 1, i + dir));
+  gameSpeed = SPEED_STEPS[i];
+}
+
+// === STARFIELD ===
+const STAR_LAYERS = [
+  { stars: [], speed: 60,  size: 1.0, color: 'rgba(255,255,255,0.4)' },
+  { stars: [], speed: 120, size: 1.5, color: 'rgba(255,255,255,0.7)' },
+  { stars: [], speed: 200, size: 2.0, color: 'rgba(200,220,255,1.0)' },
+];
+(function initStars() {
+  STAR_LAYERS.forEach(layer => {
+    for (let i = 0; i < 60; i++)
+      layer.stars.push({ x: Math.random() * W, y: Math.random() * H });
+  });
+})();
+
+function updateStars(dt) {
+  STAR_LAYERS.forEach(layer => {
+    layer.stars.forEach(s => {
+      s.y += layer.speed * dt;
+      if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+    });
+  });
+}
+
+function drawStars() {
+  STAR_LAYERS.forEach(layer => {
+    ctx.fillStyle = layer.color;
+    layer.stars.forEach(s => ctx.fillRect(s.x, s.y, layer.size, layer.size));
+  });
+}
+
+// === HUD & SCREENS ===
+function drawTitle() {
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.shadowColor = '#0099ff';
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 72px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('RAIDEN', W/2, 200);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = '#aaaaff';
+  ctx.font = '14px monospace';
+  ctx.fillText('ARCADE CLONE', W/2, 230);
+
+  ctx.fillStyle = '#ffff44';
+  ctx.font = '16px monospace';
+  if (Math.floor(Date.now() / 500) % 2)
+    ctx.fillText('PRESS ENTER TO START', W/2, 340);
+
+  ctx.fillStyle = '#aaaaaa';
+  ctx.font = '13px monospace';
+  ctx.fillText('HI-SCORE: ' + highScore, W/2, 390);
+
+  ctx.fillStyle = '#888';
+  ctx.font = '11px monospace';
+  ctx.fillText('ARROWS move   SPACE fire   B bomb', W/2, 460);
+  ctx.fillText('P pause   S settings', W/2, 478);
+}
+
+function drawPause() {
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 36px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('PAUSED', W/2, H/2 - 10);
+  ctx.fillStyle = '#aaa';
+  ctx.font = '14px monospace';
+  ctx.fillText('P to resume', W/2, H/2 + 24);
+}
+
+function drawSettings() {
+  const bx = W/2 - 130, by = H/2 - 90, bw = 260, bh = 185;
+  ctx.fillStyle = 'rgba(0,10,30,0.94)';
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.strokeStyle = '#4488ff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bx, by, bw, bh);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('SETTINGS', W/2, by + 30);
+
+  ctx.font = '13px monospace';
+  ctx.fillStyle = '#aaaaff';
+  ctx.fillText('M  Sound: ' + (soundOn ? 'ON ' : 'OFF'), W/2, by + 68);
+  ctx.fillText('[  Speed: ' + gameSpeed.toFixed(2) + 'x  ]', W/2, by + 92);
+
+  ctx.fillStyle = '#666';
+  ctx.font = '11px monospace';
+  ctx.fillText('M = toggle sound   [ / ] = speed', W/2, by + 130);
+  ctx.fillText('S to close', W/2, by + 150);
+}
+
+function drawGameOver() {
+  ctx.fillStyle = 'rgba(0,0,0,0.82)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#ff4444';
+  ctx.font = 'bold 48px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('GAME OVER', W/2, 260);
+  ctx.fillStyle = '#fff';
+  ctx.font = '18px monospace';
+  ctx.fillText('SCORE: ' + score, W/2, 320);
+  ctx.fillText('HI-SCORE: ' + highScore, W/2, 348);
+  ctx.fillStyle = '#aaffaa';
+  ctx.font = '13px monospace';
+  ctx.fillText('ENTER → title    C → copy score', W/2, 405);
+}
+
+function drawStageClear() {
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#ffff44';
+  ctx.shadowColor = '#ffaa00';
+  ctx.shadowBlur = 20;
+  ctx.font = 'bold 36px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('STAGE CLEAR!', W/2, H/2 - 10);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#fff';
+  ctx.font = '16px monospace';
+  ctx.fillText('STAGE 2 INCOMING...', W/2, H/2 + 30);
+}
+
+// === STATE MACHINE — startGame stub ===
+function startGame() {
+  score = 0;
+  state = STATE.PLAYING;
+}
+
+// === MAIN LOOP ===
+let lastTime = 0;
+let accumulator = 0;
+
+function loop(ts) {
+  requestAnimationFrame(loop);
+  const rawDt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+  const dt = rawDt * gameSpeed;
+
+  // Update
+  updateStars(dt);
+  if (state === STATE.GAMEOVER && keys['KeyC']) {
+    navigator.clipboard && navigator.clipboard.writeText(
+      'RAIDEN — Score: ' + score + ' | Hi: ' + highScore);
+  }
+
+  // Render
+  ctx.fillStyle = '#020208';
+  ctx.fillRect(0, 0, W, H);
+  drawStars();
+
+  if (state === STATE.TITLE)    drawTitle();
+  else if (state === STATE.GAMEOVER) drawGameOver();
+  else {
+    // placeholder playing/paused frame
+    ctx.fillStyle = '#fff';
+    ctx.font = '20px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('PLAYING (stub)', W/2, H/2);
+    if (state === STATE.PAUSED) drawPause();
+    if (state === STATE.STAGECLEAR) drawStageClear();
+  }
+  if (settingsOpen) drawSettings();
+}
+
 // === BOOTSTRAP ===
-// placeholder — just clear to dark blue to verify canvas works
-ctx.fillStyle = '#020208';
-ctx.fillRect(0, 0, W, H);
-ctx.fillStyle = '#fff';
-ctx.font = '20px monospace';
-ctx.textAlign = 'center';
-ctx.fillText('RAIDEN scaffold OK', W/2, H/2);
+requestAnimationFrame(ts => { lastTime = ts; requestAnimationFrame(loop); });
 </script>
 </body>
 </html>
