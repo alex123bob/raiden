@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAIDEN</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -13,7 +14,7 @@
     height: 100vh;
     overflow: hidden;
   }
-  canvas { display: block; image-rendering: pixelated; }
+  canvas { display: block; image-rendering: pixelated; touch-action: none; }
 </style>
 </head>
 <body>
@@ -109,6 +110,185 @@ function cycleSpeed(dir) {
   i = Math.max(0, Math.min(SPEED_STEPS.length - 1, i + dir));
   gameSpeed = SPEED_STEPS[i];
 }
+
+// === TOUCH CONTROLS (mobile) ===
+// Touch is just another writer into the keys[] map + handleKeyPress(), so the
+// game logic below is untouched. Controls render/handle only on touch devices.
+const isTouch = ('ontouchstart' in window) ||
+                (window.matchMedia && matchMedia('(pointer: coarse)').matches);
+
+// Control geometry, in game coordinates (480x640).
+const TC = {
+  dpad:  { x: 84,     y: H - 96, r: 62, dead: 12 },
+  fire:  { x: W - 66, y: H - 86, r: 48 },
+  bomb:  { x: W - 66, y: H - 176, r: 34 },
+  pause: { x: W - 26, y: 52, r: 16 },
+  gear:  { x: W - 68, y: 52, r: 16 },
+};
+const touchPts = {};        // identifier -> {x, y} in game coords
+let firePressed = false;    // glow flags for drawing
+let bombPressed = false;
+
+function toCanvas(t) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (t.clientX - rect.left) / rect.width  * W,
+    y: (t.clientY - rect.top)  / rect.height * H,
+  };
+}
+function within(p, c) {
+  const dx = p.x - c.x, dy = p.y - c.y;
+  return dx * dx + dy * dy <= c.r * c.r;
+}
+
+// Discrete (one-per-press) actions for a freshly-started touch.
+// Returns true if the touch was consumed (should not drive movement).
+function touchDiscrete(p) {
+  if (settingsOpen) {
+    const bx = W/2 - 130, by = H/2 - 90, bw = 260, bh = 185;
+    if (p.y > by + 55 && p.y < by + 80) { handleKeyPress('KeyM'); return true; }
+    if (p.y > by + 80 && p.y < by + 105) { cycleSpeed(p.x < W/2 ? -1 : 1); return true; }
+    if (p.x < bx || p.x > bx + bw || p.y < by || p.y > by + bh) settingsOpen = false;
+    return true;  // swallow all taps while settings is open
+  }
+  if (within(p, TC.gear) &&
+      (state === STATE.TITLE || state === STATE.PLAYING || state === STATE.PAUSED)) {
+    handleKeyPress('KeyS');
+    return true;
+  }
+  if (within(p, TC.pause) && (state === STATE.PLAYING || state === STATE.PAUSED)) {
+    handleKeyPress('KeyP');
+    return true;
+  }
+  if (state === STATE.TITLE || state === STATE.GAMEOVER || state === STATE.VICTORY) {
+    handleKeyPress('Enter');
+    return true;
+  }
+  return false;
+}
+
+// Rebuild the continuous (held) touch-owned keys from all active touch points.
+function applyTouchMovement() {
+  keys['ArrowLeft'] = keys['ArrowRight'] = keys['ArrowUp'] = keys['ArrowDown'] = false;
+  keys['Space'] = false;
+  firePressed = false;
+  let bombNow = false;
+  const d = TC.dpad, reach = d.r * 1.35;
+  for (const id in touchPts) {
+    const p = touchPts[id];
+    if (within(p, TC.fire)) { keys['Space'] = true; firePressed = true; continue; }
+    if (within(p, TC.bomb)) { bombNow = true; continue; }
+    const dx = p.x - d.x, dy = p.y - d.y;
+    if (dx * dx + dy * dy <= reach * reach) {
+      if (dx < -d.dead) keys['ArrowLeft']  = true;
+      if (dx >  d.dead) keys['ArrowRight'] = true;
+      if (dy < -d.dead) keys['ArrowUp']    = true;
+      if (dy >  d.dead) keys['ArrowDown']  = true;
+    }
+  }
+  keys['KeyB'] = bombNow;   // _bombUsed latch in updatePlayer makes this one-shot
+  bombPressed = bombNow;
+}
+
+if (isTouch) {
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    getAudio();  // unlock WebAudio on first user gesture
+    for (const t of e.changedTouches) {
+      const p = toCanvas(t);
+      if (touchDiscrete(p)) continue;   // consumed by a menu/button
+      touchPts[t.identifier] = p;
+    }
+    applyTouchMovement();
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (touchPts[t.identifier]) touchPts[t.identifier] = toCanvas(t);
+    }
+    applyTouchMovement();
+  }, { passive: false });
+
+  const endTouch = e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) delete touchPts[t.identifier];
+    applyTouchMovement();
+  };
+  canvas.addEventListener('touchend', endTouch, { passive: false });
+  canvas.addEventListener('touchcancel', endTouch, { passive: false });
+}
+
+function drawTcBtn(c, stroke, label, fontPx) {
+  ctx.strokeStyle = stroke;
+  ctx.fillStyle = 'rgba(20,30,50,0.38)';
+  ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#dde';
+  ctx.font = (fontPx || 15) + 'px monospace';
+  ctx.fillText(label, c.x, c.y);
+}
+
+function drawTouchControls() {
+  if (!isTouch) return;
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 2;
+
+  const playing = (state === STATE.PLAYING || state === STATE.PAUSED);
+
+  if (playing) {
+    // D-pad
+    const d = TC.dpad;
+    ctx.strokeStyle = 'rgba(120,180,255,0.5)';
+    ctx.fillStyle   = 'rgba(30,50,90,0.28)';
+    ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.font = '18px monospace';
+    const dirs = [
+      ['ArrowUp',    0,       -d.r*0.6, '▲'],
+      ['ArrowDown',  0,        d.r*0.6, '▼'],
+      ['ArrowLeft', -d.r*0.6,  0,       '◀'],
+      ['ArrowRight', d.r*0.6,  0,       '▶'],
+    ];
+    for (const [k, ox, oy, ch] of dirs) {
+      ctx.fillStyle = keys[k] ? '#ffff66' : 'rgba(160,200,255,0.8)';
+      ctx.fillText(ch, d.x + ox, d.y + oy);
+    }
+
+    // Fire
+    const f = TC.fire;
+    ctx.strokeStyle = 'rgba(255,120,120,0.55)';
+    ctx.fillStyle = firePressed ? 'rgba(255,80,80,0.42)' : 'rgba(90,30,30,0.28)';
+    ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffcccc'; ctx.font = 'bold 15px monospace';
+    ctx.fillText('FIRE', f.x, f.y);
+
+    // Bomb
+    const b = TC.bomb;
+    ctx.strokeStyle = 'rgba(255,150,255,0.55)';
+    ctx.fillStyle = bombPressed ? 'rgba(255,100,255,0.42)' : 'rgba(70,30,70,0.28)';
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffccff'; ctx.font = 'bold 18px monospace';
+    ctx.fillText('★', b.x, b.y);
+
+    // Pause
+    drawTcBtn(TC.pause, 'rgba(200,200,200,0.5)',
+              state === STATE.PAUSED ? '▶' : '‖');
+  }
+
+  if (state === STATE.TITLE || playing) {
+    drawTcBtn(TC.gear, 'rgba(120,180,255,0.5)', '⚙');
+  }
+
+  if (state === STATE.TITLE || state === STATE.GAMEOVER || state === STATE.VICTORY) {
+    ctx.fillStyle = 'rgba(255,255,120,0.85)';
+    ctx.font = '13px monospace';
+    ctx.fillText('( TAP SCREEN )', W/2, H - 40);
+  }
+
+  ctx.restore();
+}
+
 
 // === AUDIO ===
 let audioCtx = null;
@@ -2314,8 +2494,13 @@ function drawTitle() {
 
   ctx.fillStyle = '#888';
   ctx.font = '11px monospace';
-  ctx.fillText('ARROWS move   SPACE fire   B bomb', W/2, 460);
-  ctx.fillText('P pause   S settings', W/2, 478);
+  if (isTouch) {
+    ctx.fillText('TAP TO START', W/2, 460);
+    ctx.fillText('D-pad move   FIRE   ★ bomb   ⚙ settings', W/2, 478);
+  } else {
+    ctx.fillText('ARROWS move   SPACE fire   B bomb', W/2, 460);
+    ctx.fillText('P pause   S settings', W/2, 478);
+  }
 }
 
 function drawPause() {
@@ -2476,6 +2661,7 @@ function loop(ts) {
     if (state === STATE.STAGECLEAR)  drawStageClear();
   }
   if (settingsOpen) drawSettings();
+  drawTouchControls();
 }
 
 // === BOOTSTRAP ===
