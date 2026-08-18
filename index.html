@@ -359,6 +359,34 @@ function drawPlayer(p) {
   ctx.beginPath(); ctx.moveTo(20, 8);  ctx.lineTo(8, 0);  ctx.stroke();
 
   ctx.restore();
+
+  // Charge ring indicator — only at lv5 while charging
+  if (p.weaponLv === 5 && p.charging && p.chargeTime > 0) {
+    const frac  = Math.min(1, p.chargeTime / CHARGE_DURATION);
+    const ringR = 28 + frac * 8;
+    const startAngle = -Math.PI / 2;
+    const endAngle   = startAngle + frac * Math.PI * 2;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.shadowColor = WEAPON_COLORS[p.weapon];
+    ctx.shadowBlur  = 12 + frac * 16;
+    ctx.strokeStyle = WEAPON_COLORS[p.weapon];
+    ctx.lineWidth   = 3;
+    ctx.globalAlpha = 0.55 + frac * 0.45;
+    ctx.beginPath();
+    ctx.arc(0, 0, ringR, startAngle, endAngle);
+    ctx.stroke();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth   = 1.2;
+    ctx.globalAlpha = 0.7 * frac;
+    ctx.beginPath();
+    ctx.arc(0, 0, ringR - 3, startAngle, endAngle);
+    ctx.stroke();
+    ctx.restore();
+    ctx.globalAlpha  = 1;
+    ctx.shadowBlur   = 0;
+    ctx.shadowColor  = 'transparent';
+  }
 }
 
 function updatePlayer(dt) {
