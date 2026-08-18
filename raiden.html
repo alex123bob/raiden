@@ -879,6 +879,47 @@ function runCollision() {
 }
 
 // === HUD & SCREENS ===
+function drawHUD() {
+  ctx.save();
+  ctx.textBaseline = 'alphabetic';
+
+  // Score (top-left)
+  ctx.fillStyle = '#fff';
+  ctx.font = '13px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('SCORE: ' + score, 8, 18);
+
+  // Hi-score (top-right)
+  ctx.textAlign = 'right';
+  ctx.fillText('HI: ' + highScore, W - 8, 18);
+
+  // Stage / loop (top-center)
+  ctx.fillStyle = '#999';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'center';
+  const stageNum = (typeof currentStage !== 'undefined') ? currentStage : 1;
+  const loopStr  = (typeof loopMult !== 'undefined' && loopMult > 1) ? '  Loop ' + loopMult : '';
+  ctx.fillText('STAGE ' + stageNum + loopStr, W/2, 18);
+
+  // Lives icons (bottom-left row)
+  ctx.fillStyle = '#88ccff';
+  ctx.font = '13px monospace';
+  ctx.textAlign = 'left';
+  for (let i = 0; i < player.lives; i++) ctx.fillText('\u25c6', 8 + i * 14, H - 8);
+
+  // Bomb icons (above lives row)
+  ctx.fillStyle = '#ff88ff';
+  for (let i = 0; i < player.bombs; i++) ctx.fillText('\u2605', 8 + i * 14, H - 24);
+
+  // Weapon name + level (bottom-right)
+  ctx.fillStyle = WEAPON_COLORS[player.weapon];
+  ctx.textAlign = 'right';
+  ctx.font = '12px monospace';
+  ctx.fillText(WEAPON_NAMES[player.weapon] + ' Lv' + player.weaponLv, W - 8, H - 8);
+
+  ctx.restore();
+}
+
 function drawTitle() {
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
   ctx.fillRect(0, 0, W, H);
@@ -1030,6 +1071,7 @@ function loop(ts) {
     drawPlayerBullets();
     drawPlayer(player);
     drawParticles();
+    drawHUD();
     if (state === STATE.PAUSED)      drawPause();
     if (state === STATE.STAGECLEAR)  drawStageClear();
   }
