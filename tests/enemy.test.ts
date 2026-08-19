@@ -1,39 +1,38 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { mkEnemy, fireEnemy, updateEnemies } from '../src/entities/Enemy.js';
-import { extraBulletStreams, enemyHpScale, fireIntervalScale } from '../src/core/difficulty.js';
+import { Enemy, updateEnemies } from '../src/entities/Enemy.js';
+import { ENEMY_TYPES } from '../src/registries/enemies/index.js';
+import { enemyHpScale, fireIntervalScale, extraBulletStreams } from '../src/core/difficulty.js';
+import { stubContext } from './context-stub.js';
 
 afterEach(() => vi.restoreAllMocks());
 
 describe('enemy difficulty levers', () => {
-  it('mkEnemy scales hp with the stage when g is passed', () => {
+  it('Enemy scales hp with the stage when ctx is passed', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
-    const e = mkEnemy(0, 0, 0, null, { currentStage: 18 });
-    expect(e.hp).toBe(Math.ceil(3 * enemyHpScale(18)));   // type 0 base hp 3
-    const eBase = mkEnemy(0, 0, 0, null);                  // no g -> base hp
+    const e = new Enemy(ENEMY_TYPES.get('fighter')!, 0, 0, null, { currentStage: 18 });
+    expect(e.hp).toBe(Math.ceil(3 * enemyHpScale(18)));
+    const eBase = new Enemy(ENEMY_TYPES.get('fighter')!, 0, 0, null);
     expect(eBase.hp).toBe(3);
   });
 
-  it('fireEnemy fires base shots plus extra streams at milestone stages', () => {
+  it('fire fires base shots plus extra streams at milestone stages', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
-    const g = { currentStage: 18, diffMult: 1, player: { x: 240, y: 300, dead: false }, enemyBullets: [] };
-    const e = mkEnemy(0, 240, 130, null);
-    fireEnemy(e, g);
-    expect(g.enemyBullets.length).toBe(1 + extraBulletStreams(18));  // type 0 = 1 aimed shot + 4 streams
+    const g = stubContext({ currentStage: 18, diffMult: 1 });
+    const e = new Enemy(ENEMY_TYPES.get('fighter')!, 240, 130, null);
+    e.fire(g);
+    expect(g.enemyBullets.length).toBe(1 + extraBulletStreams(18));
   });
 
   it('updateEnemies applies the fire-interval scale for turrets', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
-    const g = {
-      currentStage: 18, diffMult: 1,
-      player: { x: 240, y: 200, dead: false },
-      enemies: [], enemyBullets: [],
-    };
-    const e = mkEnemy(3, 240, 220, null);  // turret, in range of player
+    const g = stubContext({ currentStage: 18, diffMult: 1 });
+    g.player.x = 240; g.player.y = 200;
+    const e = new Enemy(ENEMY_TYPES.get('turret')!, 240, 220, null);
     e.fireTimer = 0;
     g.enemies.push(e);
     updateEnemies(1 / 60, g);
-    const baseInterval = 1.6;              // turret base interval
+    const baseInterval = 1.6;
     const scaled = (baseInterval * fireIntervalScale(18)) / 1;
-    expect(e.fireTimer).toBeCloseTo(scaled + 0.25, 5);   // jitter is Math.random()*0.5, random fixed at 0.5
+    expect(e.fireTimer).toBeCloseTo(scaled + 0.25, 5);
   });
 });

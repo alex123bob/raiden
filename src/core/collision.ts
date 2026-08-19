@@ -25,7 +25,8 @@ export function checkPlayerBulletsVsEnemies(g) {
     if (e.hp <= 0) {
       g.score += e.score * g.loopMult;
       g.saveHS();
-      g.spawnParticles('explosion', e.x, e.y, { size: e.type + 1, color: e.color });
+      const SIZE_BY_KEY: Record<string, number> = { fighter: 1, gunship: 2, bomber: 3, turret: 4 };
+      g.spawnParticles('explosion', e.x, e.y, { size: SIZE_BY_KEY[e.def.key] ?? 1, color: e.color });
       tryDropPowerup(e, g);
       g.enemies.splice(i, 1);
     }

@@ -436,7 +436,7 @@ export function updateBoss(dt, g) {
 export function spawnMinion(g) {
   const b = g.boss;
   if (!b) return;
-  const e = mkEnemy(0, b.x + (Math.random()-0.5)*40, b.y + 20, null, g);
+  const e = mkEnemy('fighter', b.x + (Math.random()-0.5)*40, b.y + 20, null, g);
   e.spd = ENEMY_CFG[0].spd * g.diffMult * 1.2;
   g.enemies.push(e);
 }

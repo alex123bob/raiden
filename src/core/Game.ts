@@ -6,7 +6,7 @@ import { updateParticles, drawParticles } from '../entities/Particle.js';
 import { createPlayer, drawPlayer, updatePlayer } from '../entities/Player.js';
 import { updatePlayerBullets, drawPlayerBullets,
          updateEnemyBullets, drawEnemyBullets } from '../entities/Bullet.js';
-import { drawEnemy, updateEnemies } from '../entities/Enemy.js';
+import { updateEnemies } from '../entities/Enemy.js';
 import { updatePowerups, drawPowerups } from '../entities/Powerup.js';
 import { drawBoss, updateBoss } from '../entities/Boss.js';
 import { runCollision } from './collision.js';
@@ -142,7 +142,7 @@ export class Game {
     else if (this.state === STATE.GAMEOVER) drawGameOver(this);
     else if (this.state === STATE.VICTORY)  drawVictory(this);
     else {
-      this.enemies.forEach(drawEnemy);
+      this.enemies.forEach(e => e.draw(this.renderer, this));
       drawBoss(this);
       drawEnemyBullets(this.renderer, this);
       drawPowerups(this.renderer, this);
