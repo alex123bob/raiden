@@ -21,6 +21,7 @@ export function pathFormation(cx, sy, spd, idx, total) {
 // Descriptor path: ['down', sx, sy, spd] | ['sin', sx, sy, spd, amp, freq] | ['form', cx, sy, spd, idx, total]
 // spd is the raw factor; waveGen multiplies by diffMult (matches the old X*diffMult constants).
 function expandPath(desc, diffMult) {
+  if (!Array.isArray(desc) || desc.length < 4) throw new Error('bad path descriptor: ' + JSON.stringify(desc));
   const kind = desc[0];
   const spd = desc[3] * diffMult;
   switch (kind) {
