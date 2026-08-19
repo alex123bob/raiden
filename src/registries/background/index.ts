@@ -1,0 +1,21 @@
+import { makeRegistry } from '../../core/registry.js';
+import type { BgFeature } from '../../stages/background.js';
+import { rocks } from './rocks.js';
+import { clouds } from './clouds.js';
+import { bubbles } from './bubbles.js';
+import { streaks } from './streaks.js';
+import { hulls } from './hulls.js';
+import { wisps } from './wisps.js';
+import { walls } from './walls.js';
+import { stars } from './stars.js';
+
+export const BG_FEATURES = makeRegistry<BgFeature>();
+export const registerBgFeature = BG_FEATURES.register;
+registerBgFeature(rocks);
+registerBgFeature(clouds);
+registerBgFeature(bubbles);
+registerBgFeature(streaks);
+registerBgFeature(hulls);
+registerBgFeature(wisps);
+registerBgFeature(walls);
+registerBgFeature(stars);

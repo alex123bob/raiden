@@ -93,7 +93,7 @@ export class Game implements GameContext {
   startStage(stage: number): void {
     this.currentStage = stage;
     this.diffMult = diffMultFor(stage, this.loopMult);
-    initBackground(stage);   // old one-argument signature until Task 12
+    initBackground(stage, this);
     this.waveTable = buildWaveTable(STAGES[stage - 1], this.diffMult);
     this.waveIndex = 0;
     this.stageTimer = 0;
@@ -125,10 +125,9 @@ export class Game implements GameContext {
     this.lastTime = ts;
     const dt = rawDt * this.gameSpeed;
 
-    // NOTE: background.ts is still the old ctx-singleton module until Task 12,
-    // so these are the OLD one-argument signatures. Task 12 switches them.
-    if (this.state !== STATE.PAUSED) updateStars(dt);
-    if (this.state === STATE.PLAYING || this.state === STATE.STAGECLEAR) updateBackground(dt);
+    // NOTE: background.ts is the BG_FEATURES registry module (Task 12).
+    if (this.state !== STATE.PAUSED) updateStars(dt, this);
+    if (this.state === STATE.PLAYING || this.state === STATE.STAGECLEAR) updateBackground(dt, this);
     if (this.state === STATE.PLAYING || this.state === STATE.STAGECLEAR) updateParticles(dt, this);
     if (this.state === STATE.STAGECLEAR) this.updateStageClear(dt);
     if (this.state === STATE.VICTORY) this.updateVictory(dt);
@@ -147,11 +146,11 @@ export class Game implements GameContext {
     ctx.shadowBlur = 0;
     ctx.shadowColor = 'transparent';
     if (this.state === STATE.PLAYING || this.state === STATE.STAGECLEAR || this.state === STATE.PAUSED) {
-      drawBackground(this);
+      drawBackground(this.renderer, this);
     } else {
       ctx.fillStyle = '#020208';
       ctx.fillRect(0, 0, W, H);
-      drawStars();
+      drawStars(this.renderer, this);
     }
 
     if (this.state === STATE.TITLE)         drawTitle(this);
