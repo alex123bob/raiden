@@ -83,7 +83,7 @@ Immutable constants stay imported as bare bindings (so moved bodies reference th
 
 **Conversion rule for every relocated function:** give it a `g` parameter (last position), convert each *global binding* reference to `g.<name>`, and **leave object keys and property accesses untouched** (`e.score`, `entry.eliteHp`, `STAR_LAYERS[i].color`). When in doubt, a converted-but-unused `g.x` is safe; an unconverted binding throws a loud `ReferenceError` at the first frame — the playtest checkpoint catches it.
 
-System-internal state that **no other module touches** stays module-local (this is not "a module keeping a copy of shared game state", it is the system's private state): `audioCtx` (audio), `isTouch, TC, STICK_R, STICK_DEAD, STICK_HOME, stick, roles, firePressed, bombPressed` (input), `STAR_LAYERS` + the `bg*` arrays + `bgStage` (background), `laserActive, laserPulse` (Bullet, unused legacy), `ENEMY_CFG, WEAPON_NAMES, WEAPON_COLORS` (their owning entity module).
+System-internal state that **no other module touches** stays module-local (this is not "a module keeping a copy of shared game state", it is the system's private state): `audioCtx` (audio), `isTouch, TC, STICK_R, STICK_DEAD, STICK_HOME, stick, roles, firePressed, bombPressed` (input), `STAR_LAYERS` + the `bg*` arrays + `bgStage` (background), `laserActive, laserPulse` (Player — unused legacy, declared where the writes are; NOT redeclared in Bullet.js), `ENEMY_CFG, WEAPON_NAMES, WEAPON_COLORS` (their owning entity module).
 
 Per-task conversion tables below list only the **real** global references in each section (property accesses and comment matches already excluded).
 
@@ -1105,7 +1105,7 @@ export function respawnPlayer(g) {
 }
 ```
 
-> **Rule of thumb for this task:** paste each original function body, then apply ONLY the identifier substitutions in the conversion table (plus the call rewrites listed above). Do not convert `player` to `g.player` inside `drawPlayer(p)`/`updatePlayer(dt, g)` — those read the passed `p`. `updatePlayer` uses the module-level `laserActive`/`laserPulse` (declared above) exactly as the source does.
+> **Rule of thumb for this task:** paste each original function body, then apply ONLY the identifier substitutions in the conversion table (plus the call rewrites listed above). `drawPlayer(p)` reads the passed `p` (do not convert `player` there). `updatePlayer(dt, g)`/`killPlayer(g)`/`respawnPlayer(g)` read the player via `g.player` (source's bare `player` → `g.player`). `updatePlayer` uses the module-level `laserActive`/`laserPulse` (declared above) exactly as the source does.
 
 - [ ] **Step 2: Verify it parses**
 
