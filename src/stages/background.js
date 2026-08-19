@@ -31,6 +31,7 @@ function drawStars() {
 }
 
 // === STAGE BACKGROUNDS ===
+// Temporary local copy of STAGE_BG; replaced by stageData.bg in Task 20.
 const STAGE_BG = [
   { baseFill: '#020208', starColor: ['rgba(255,255,255,0.4)', 'rgba(255,255,255,0.7)', 'rgba(200,220,255,1.0)'] },
   { baseFill: '#0f0c08', starColor: ['rgba(200,190,170,0.3)', 'rgba(210,200,180,0.5)', 'rgba(220,210,190,0.8)'] },

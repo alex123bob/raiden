@@ -725,6 +725,8 @@ git commit -m "refactor: extract input (keyboard + touch) into src/core/input.js
 
 Source: index.html:418–445 (STARFIELD) + 447–719 (STAGE BACKGROUNDS). Background state (`STAR_LAYERS`, `bgRocks..bgWalls`, `bgStage`) is module-private. `stageTimer` and `currentStage` come from `g`. **The `STAGE_BG` table is removed in this task** — its 8 entries are moved into `stageData.js` (Task 18); in the meantime `drawBackground` reads a temporary local copy so the module is complete and runnable on its own. `initBackground`/`updateBackground` keep their per-stage-number switches exactly (unchanged behavior).
 
+> **⚠️ SUPERSEDED (execution note):** the starfield code block in Step 1 below is an approximation (it shows `size: 1,2,3`, 42 stars, and a `speeds [12,30,55]` array). The actual source at index.html:418–445 uses per-layer `speed: 60/120/200`, `size: 1.0/1.5/2.0`, and 60 stars per layer with `s.y = 0` wrapping. The committed `src/stages/background.js` ports the source faithfully — trust `index.html:418–445` over the block below. The Step 2 block (background system, index.html:447–719) is accurate as written.
+
 - [ ] **Step 1: Create `src/stages/background.js`**
 
 ```js
