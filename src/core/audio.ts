@@ -34,8 +34,8 @@ export class WebAudioBus implements AudioBus {
 }
 
 export class SilentBus implements AudioBus {
-  play(): void {}
-  setEnabled(): void {}
+  play(_sfxKey: string, _opts?: SfxOpts): void {}
+  setEnabled(_enabled: boolean): void {}
 }
 
 export function SFX_REGISTRY_KEYS(): string[] { return [...SFX.keys()]; }
