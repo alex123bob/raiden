@@ -6,13 +6,6 @@ import { STAGES } from '../stages/stageData.js';
 
 // === BOSS ===
 
-// TEMPORARY (Phase A scaffolding; Task 24 removes these aliases and
-// parameterizes drawBossN with explicit (ctx, boss, angle, timer)):
-// Module-level aliases mirroring the shared boss draw state. drawBoss copies
-// g.* into the aliases before dispatching so the drawBossN bodies below stay
-// byte-identical to the source (they reference the bare names).
-let boss = null, bossAngle = 0, bossTimer = 0;
-
 export function createBoss(g) {
   const def = STAGES[g.currentStage - 1].boss;
   g.bossMaxHp = def.hp;
@@ -37,19 +30,37 @@ export function createBoss(g) {
   };
 }
 
-export function drawBoss(g) {
-  if (!g.boss) return;
-  boss = g.boss; bossAngle = g.bossAngle; bossTimer = g.bossTimer;
-  switch (boss.stageNum) {
-    case 1: drawBoss1(); break;
-    case 2: drawBoss2(); break;
-    case 3: drawBoss3(); break;
-    case 4: drawBoss4(); break;
-    case 5: drawBoss5(); break;
-    case 6: drawBoss6(); break;
-    case 7: drawBoss7(); break;
-    case 8: drawBoss8(); break;
+const offCanvas = document.createElement('canvas');
+
+function drawBossArchetype(c, b, angle, timer) {
+  switch (b.archetype) {
+    case 1: drawBoss1(c, b, angle, timer); break;
+    case 2: drawBoss2(c, b, angle, timer); break;
+    case 3: drawBoss3(c, b, angle, timer); break;
+    case 4: drawBoss4(c, b, angle, timer); break;
+    case 5: drawBoss5(c, b, angle, timer); break;
+    case 6: drawBoss6(c, b, angle, timer); break;
+    case 7: drawBoss7(c, b, angle, timer); break;
+    case 8: drawBoss8(c, b, angle, timer); break;
   }
+}
+
+export function drawBoss(g) {
+  const b = g.boss;
+  if (!b) return;
+  const R = Math.ceil(b.r * 2.0) + 8;          // fits boss5's r*1.8 glow and boss8's pulsing outer
+  offCanvas.width = offCanvas.height = R * 2;
+  const oc = offCanvas.getContext('2d');
+  oc.setTransform(1, 0, 0, 1, 0, 0);
+  oc.clearRect(0, 0, R * 2, R * 2);
+  drawBossArchetype(oc, { ...b, x: R, y: R }, g.bossAngle, g.bossTimer);
+  if (b.tint) {
+    oc.globalCompositeOperation = 'source-atop';
+    oc.fillStyle = b.tint;
+    oc.fillRect(0, 0, R * 2, R * 2);
+    oc.globalCompositeOperation = 'source-over';
+  }
+  ctx.drawImage(offCanvas, b.x - R, b.y - R);
   drawBossHpBar(g);
 }
 
@@ -69,234 +80,234 @@ export function drawBossHpBar(g) {
   ctx.fillText('BOSS', W/2, by - 3);
 }
 
-function drawBoss1() {
-  ctx.save();
-  ctx.translate(boss.x, boss.y);
-  const grad = ctx.createRadialGradient(0, 0, 8, 0, 0, boss.r);
+function drawBoss1(c, b, angle, timer) {
+  c.save();
+  c.translate(b.x, b.y);
+  const grad = c.createRadialGradient(0, 0, 8, 0, 0, b.r);
   grad.addColorStop(0, '#ff6622'); grad.addColorStop(0.5, '#882211'); grad.addColorStop(1, '#330800');
-  ctx.fillStyle = grad;
-  ctx.beginPath(); ctx.arc(0, 0, boss.r, 0, Math.PI*2); ctx.fill();
-  ctx.save(); ctx.rotate(bossAngle);
+  c.fillStyle = grad;
+  c.beginPath(); c.arc(0, 0, b.r, 0, Math.PI*2); c.fill();
+  c.save(); c.rotate(angle);
   for (let i = 0; i < 4; i++) {
-    ctx.save(); ctx.rotate(i * Math.PI/2);
-    ctx.fillStyle = '#bb3300';
-    ctx.fillRect(-4, 0, 8, boss.r * 0.88);
-    ctx.fillStyle = '#ff7700';
-    ctx.beginPath(); ctx.arc(0, boss.r * 0.82, 9, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
+    c.save(); c.rotate(i * Math.PI/2);
+    c.fillStyle = '#bb3300';
+    c.fillRect(-4, 0, 8, b.r * 0.88);
+    c.fillStyle = '#ff7700';
+    c.beginPath(); c.arc(0, b.r * 0.82, 9, 0, Math.PI*2); c.fill();
+    c.restore();
   }
-  ctx.restore();
-  ctx.fillStyle = '#ffff00'; ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(0, 0,  8, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#000';    ctx.beginPath(); ctx.arc(0, 0,  3, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
+  c.restore();
+  c.fillStyle = '#ffff00'; c.beginPath(); c.arc(0, 0, 13, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#ff0000'; c.beginPath(); c.arc(0, 0,  8, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#000';    c.beginPath(); c.arc(0, 0,  3, 0, Math.PI*2); c.fill();
+  c.restore();
 }
 
-function drawBoss2() {
-  ctx.save();
-  ctx.translate(boss.x, boss.y);
-  ctx.fillStyle = '#334455';
-  ctx.beginPath();
+function drawBoss2(c, b, angle, timer) {
+  c.save();
+  c.translate(b.x, b.y);
+  c.fillStyle = '#334455';
+  c.beginPath();
   for (let i = 0; i < 6; i++) {
     const a = i * Math.PI / 3 - Math.PI / 6;
-    i === 0 ? ctx.moveTo(Math.cos(a)*boss.r, Math.sin(a)*boss.r)
-            : ctx.lineTo(Math.cos(a)*boss.r, Math.sin(a)*boss.r);
+    i === 0 ? c.moveTo(Math.cos(a)*b.r, Math.sin(a)*b.r)
+            : c.lineTo(Math.cos(a)*b.r, Math.sin(a)*b.r);
   }
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = '#8899bb'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.save(); ctx.rotate(bossAngle * 0.6);
+  c.closePath(); c.fill();
+  c.strokeStyle = '#8899bb'; c.lineWidth = 2; c.stroke();
+  c.save(); c.rotate(angle * 0.6);
   for (let i = 0; i < 6; i++) {
-    ctx.save(); ctx.rotate(i * Math.PI / 3);
-    ctx.fillStyle = '#5566aa';
-    ctx.fillRect(-5, 0, 10, boss.r * 0.9);
-    ctx.fillStyle = '#aabbff';
-    ctx.beginPath(); ctx.arc(0, boss.r * 0.85, 8, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
+    c.save(); c.rotate(i * Math.PI / 3);
+    c.fillStyle = '#5566aa';
+    c.fillRect(-5, 0, 10, b.r * 0.9);
+    c.fillStyle = '#aabbff';
+    c.beginPath(); c.arc(0, b.r * 0.85, 8, 0, Math.PI*2); c.fill();
+    c.restore();
   }
-  ctx.restore();
-  ctx.fillStyle = '#2244ff'; ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#88aaff'; ctx.beginPath(); ctx.arc(0, 0,  8, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0,  3, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
+  c.restore();
+  c.fillStyle = '#2244ff'; c.beginPath(); c.arc(0, 0, 14, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#88aaff'; c.beginPath(); c.arc(0, 0,  8, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#ffffff'; c.beginPath(); c.arc(0, 0,  3, 0, Math.PI*2); c.fill();
+  c.restore();
 }
 
-function drawBoss3() {
-  ctx.save();
-  ctx.translate(boss.x, boss.y);
-  ctx.fillStyle = '#443300';
-  ctx.fillRect(-boss.r, -boss.r * 0.6, boss.r * 2, boss.r * 1.2);
-  ctx.strokeStyle = '#aa6600'; ctx.lineWidth = 2;
-  ctx.strokeRect(-boss.r, -boss.r * 0.6, boss.r * 2, boss.r * 1.2);
-  ctx.fillStyle = '#664400';
-  ctx.fillRect(-boss.r - 22, -8, 22, 16);
-  ctx.fillStyle = '#aa7700';
-  ctx.fillRect(-boss.r - 28, -5, 8, 10);
-  ctx.fillStyle = '#664400';
-  ctx.fillRect(boss.r, -8, 22, 16);
-  ctx.fillStyle = '#aa7700';
-  ctx.fillRect(boss.r + 20, -5, 8, 10);
-  ctx.strokeStyle = '#ffaa00'; ctx.lineWidth = 1;
+function drawBoss3(c, b, angle, timer) {
+  c.save();
+  c.translate(b.x, b.y);
+  c.fillStyle = '#443300';
+  c.fillRect(-b.r, -b.r * 0.6, b.r * 2, b.r * 1.2);
+  c.strokeStyle = '#aa6600'; c.lineWidth = 2;
+  c.strokeRect(-b.r, -b.r * 0.6, b.r * 2, b.r * 1.2);
+  c.fillStyle = '#664400';
+  c.fillRect(-b.r - 22, -8, 22, 16);
+  c.fillStyle = '#aa7700';
+  c.fillRect(-b.r - 28, -5, 8, 10);
+  c.fillStyle = '#664400';
+  c.fillRect(b.r, -8, 22, 16);
+  c.fillStyle = '#aa7700';
+  c.fillRect(b.r + 20, -5, 8, 10);
+  c.strokeStyle = '#ffaa00'; c.lineWidth = 1;
   for (let i = -1; i <= 1; i++) {
-    ctx.beginPath(); ctx.moveTo(i * boss.r * 0.55, -boss.r * 0.6);
-    ctx.lineTo(i * boss.r * 0.55, -boss.r * 0.6 - 12); ctx.stroke();
+    c.beginPath(); c.moveTo(i * b.r * 0.55, -b.r * 0.6);
+    c.lineTo(i * b.r * 0.55, -b.r * 0.6 - 12); c.stroke();
   }
-  ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ff4400'; ctx.beginPath(); ctx.arc(0, 0,  7, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
+  c.fillStyle = '#ffcc00'; c.beginPath(); c.arc(0, 0, 12, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#ff4400'; c.beginPath(); c.arc(0, 0,  7, 0, Math.PI*2); c.fill();
+  c.restore();
 }
 
-function drawBoss4() {
-  ctx.save();
-  ctx.translate(boss.x, boss.y);
-  const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, boss.r);
+function drawBoss4(c, b, angle, timer) {
+  c.save();
+  c.translate(b.x, b.y);
+  const grad = c.createRadialGradient(0, 0, 4, 0, 0, b.r);
   grad.addColorStop(0, '#44aa44'); grad.addColorStop(0.6, '#226622'); grad.addColorStop(1, '#112211');
-  ctx.fillStyle = grad;
-  ctx.beginPath(); ctx.arc(0, 0, boss.r, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = '#66ee44'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.save(); ctx.rotate(bossAngle * 0.4);
+  c.fillStyle = grad;
+  c.beginPath(); c.arc(0, 0, b.r, 0, Math.PI*2); c.fill();
+  c.strokeStyle = '#66ee44'; c.lineWidth = 2; c.stroke();
+  c.save(); c.rotate(angle * 0.4);
   for (let i = 0; i < 4; i++) {
-    ctx.save(); ctx.rotate(i * Math.PI / 2);
-    ctx.fillStyle = '#88cc22';
-    ctx.beginPath();
-    ctx.moveTo(0, boss.r); ctx.lineTo(6, boss.r + 16);
-    ctx.lineTo(0, boss.r + 24); ctx.lineTo(-6, boss.r + 16);
-    ctx.closePath(); ctx.fill();
-    ctx.restore();
+    c.save(); c.rotate(i * Math.PI / 2);
+    c.fillStyle = '#88cc22';
+    c.beginPath();
+    c.moveTo(0, b.r); c.lineTo(6, b.r + 16);
+    c.lineTo(0, b.r + 24); c.lineTo(-6, b.r + 16);
+    c.closePath(); c.fill();
+    c.restore();
   }
-  ctx.restore();
-  ctx.fillStyle = '#ccff00'; ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#446600'; ctx.beginPath(); ctx.arc(0, 0,  6, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
+  c.restore();
+  c.fillStyle = '#ccff00'; c.beginPath(); c.arc(0, 0, 12, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#446600'; c.beginPath(); c.arc(0, 0,  6, 0, Math.PI*2); c.fill();
+  c.restore();
 }
 
-function drawBoss5() {
-  ctx.save();
-  ctx.translate(boss.x, boss.y);
-  const glow = ctx.createRadialGradient(0, 0, boss.r * 0.5, 0, 0, boss.r * 1.8);
+function drawBoss5(c, b, angle, timer) {
+  c.save();
+  c.translate(b.x, b.y);
+  const glow = c.createRadialGradient(0, 0, b.r * 0.5, 0, 0, b.r * 1.8);
   glow.addColorStop(0, 'rgba(255,200,0,0.3)');
   glow.addColorStop(1, 'rgba(255,80,0,0)');
-  ctx.fillStyle = glow;
-  ctx.beginPath(); ctx.arc(0, 0, boss.r * 1.8, 0, Math.PI*2); ctx.fill();
-  ctx.save(); ctx.rotate(bossAngle * 0.7);
+  c.fillStyle = glow;
+  c.beginPath(); c.arc(0, 0, b.r * 1.8, 0, Math.PI*2); c.fill();
+  c.save(); c.rotate(angle * 0.7);
   for (let i = 0; i < 8; i++) {
-    ctx.save(); ctx.rotate(i * Math.PI / 4);
-    ctx.fillStyle = '#ffaa00';
-    ctx.beginPath();
-    ctx.moveTo(-5, boss.r * 0.8); ctx.lineTo(0, boss.r * 1.5); ctx.lineTo(5, boss.r * 0.8);
-    ctx.closePath(); ctx.fill();
-    ctx.restore();
+    c.save(); c.rotate(i * Math.PI / 4);
+    c.fillStyle = '#ffaa00';
+    c.beginPath();
+    c.moveTo(-5, b.r * 0.8); c.lineTo(0, b.r * 1.5); c.lineTo(5, b.r * 0.8);
+    c.closePath(); c.fill();
+    c.restore();
   }
-  ctx.restore();
-  const solarGrad = ctx.createRadialGradient(-8, -8, 4, 0, 0, boss.r);
+  c.restore();
+  const solarGrad = c.createRadialGradient(-8, -8, 4, 0, 0, b.r);
   solarGrad.addColorStop(0, '#ffffff'); solarGrad.addColorStop(0.3, '#ffee44');
   solarGrad.addColorStop(0.8, '#ff8800'); solarGrad.addColorStop(1, '#cc2200');
-  ctx.fillStyle = solarGrad;
-  ctx.beginPath(); ctx.arc(0, 0, boss.r, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#cc4400'; ctx.beginPath(); ctx.arc(8, -6, 7, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#882200'; ctx.beginPath(); ctx.arc(8, -6, 4, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
+  c.fillStyle = solarGrad;
+  c.beginPath(); c.arc(0, 0, b.r, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#cc4400'; c.beginPath(); c.arc(8, -6, 7, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#882200'; c.beginPath(); c.arc(8, -6, 4, 0, Math.PI*2); c.fill();
+  c.restore();
 }
 
-function drawBoss6() {
-  ctx.save();
-  ctx.translate(boss.x, boss.y);
-  ctx.fillStyle = '#223344';
-  ctx.fillRect(-boss.r, -boss.r * 0.7, boss.r * 2, boss.r * 1.4);
-  ctx.strokeStyle = '#334466'; ctx.lineWidth = 2;
+function drawBoss6(c, b, angle, timer) {
+  c.save();
+  c.translate(b.x, b.y);
+  c.fillStyle = '#223344';
+  c.fillRect(-b.r, -b.r * 0.7, b.r * 2, b.r * 1.4);
+  c.strokeStyle = '#334466'; c.lineWidth = 2;
   for (let row = -1; row <= 1; row++) {
-    ctx.beginPath();
-    ctx.moveTo(-boss.r + 4, row * boss.r * 0.3);
-    ctx.lineTo( boss.r - 4, row * boss.r * 0.3);
-    ctx.stroke();
+    c.beginPath();
+    c.moveTo(-b.r + 4, row * b.r * 0.3);
+    c.lineTo( b.r - 4, row * b.r * 0.3);
+    c.stroke();
   }
-  ctx.fillStyle = '#112233';
-  ctx.fillRect(-boss.r - 20, -15, 20, 30);
-  ctx.strokeStyle = '#4466aa'; ctx.lineWidth = 1;
-  ctx.strokeRect(-boss.r - 20, -15, 20, 30);
-  ctx.fillStyle = '#112233';
-  ctx.fillRect(boss.r, -15, 20, 30);
-  ctx.strokeRect(boss.r, -15, 20, 30);
+  c.fillStyle = '#112233';
+  c.fillRect(-b.r - 20, -15, 20, 30);
+  c.strokeStyle = '#4466aa'; c.lineWidth = 1;
+  c.strokeRect(-b.r - 20, -15, 20, 30);
+  c.fillStyle = '#112233';
+  c.fillRect(b.r, -15, 20, 30);
+  c.strokeRect(b.r, -15, 20, 30);
   for (const side of [-1, 1]) {
-    ctx.fillStyle = '#334455';
-    ctx.beginPath(); ctx.arc(side * boss.r * 0.6, boss.r * 0.5, 8, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#6688aa';
-    ctx.beginPath(); ctx.arc(side * boss.r * 0.6, boss.r * 0.5, 5, 0, Math.PI*2); ctx.fill();
+    c.fillStyle = '#334455';
+    c.beginPath(); c.arc(side * b.r * 0.6, b.r * 0.5, 8, 0, Math.PI*2); c.fill();
+    c.fillStyle = '#6688aa';
+    c.beginPath(); c.arc(side * b.r * 0.6, b.r * 0.5, 5, 0, Math.PI*2); c.fill();
   }
-  ctx.fillStyle = '#4455aa'; ctx.fillRect(-18, -boss.r * 0.7 - 14, 36, 14);
-  ctx.fillStyle = '#00ccff'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0,  5, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
+  c.fillStyle = '#4455aa'; c.fillRect(-18, -b.r * 0.7 - 14, 36, 14);
+  c.fillStyle = '#00ccff'; c.beginPath(); c.arc(0, 0, 10, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#ffffff'; c.beginPath(); c.arc(0, 0,  5, 0, Math.PI*2); c.fill();
+  c.restore();
 }
 
-function drawBoss7() {
-  ctx.save();
-  ctx.translate(boss.x, boss.y);
-  ctx.globalAlpha = boss.phantomAlpha;
-  ctx.fillStyle = '#220044';
-  ctx.beginPath();
+function drawBoss7(c, b, angle, timer) {
+  c.save();
+  c.translate(b.x, b.y);
+  c.globalAlpha = b.phantomAlpha;
+  c.fillStyle = '#220044';
+  c.beginPath();
   for (let i = 0; i < 8; i++) {
     const a = i * Math.PI / 4 - Math.PI / 8;
-    i === 0 ? ctx.moveTo(Math.cos(a)*boss.r, Math.sin(a)*boss.r)
-            : ctx.lineTo(Math.cos(a)*boss.r, Math.sin(a)*boss.r);
+    i === 0 ? c.moveTo(Math.cos(a)*b.r, Math.sin(a)*b.r)
+            : c.lineTo(Math.cos(a)*b.r, Math.sin(a)*b.r);
   }
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = '#9933ff'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.save(); ctx.rotate(-bossAngle * 1.2);
+  c.closePath(); c.fill();
+  c.strokeStyle = '#9933ff'; c.lineWidth = 2; c.stroke();
+  c.save(); c.rotate(-angle * 1.2);
   for (let i = 0; i < 4; i++) {
-    ctx.save(); ctx.rotate(i * Math.PI / 2);
-    ctx.strokeStyle = 'rgba(180,60,255,0.6)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(0, boss.r * 0.75); ctx.stroke();
-    ctx.fillStyle = '#aa44ff';
-    ctx.beginPath(); ctx.arc(0, boss.r * 0.7, 5, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
+    c.save(); c.rotate(i * Math.PI / 2);
+    c.strokeStyle = 'rgba(180,60,255,0.6)';
+    c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(0, 10); c.lineTo(0, b.r * 0.75); c.stroke();
+    c.fillStyle = '#aa44ff';
+    c.beginPath(); c.arc(0, b.r * 0.7, 5, 0, Math.PI*2); c.fill();
+    c.restore();
   }
-  ctx.restore();
-  ctx.fillStyle = '#cc00ff'; ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#440088'; ctx.beginPath(); ctx.arc(0, 0,  7, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ff88ff'; ctx.beginPath(); ctx.arc(0, 0,  3, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
-  ctx.globalAlpha = 1;
+  c.restore();
+  c.fillStyle = '#cc00ff'; c.beginPath(); c.arc(0, 0, 12, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#440088'; c.beginPath(); c.arc(0, 0,  7, 0, Math.PI*2); c.fill();
+  c.fillStyle = '#ff88ff'; c.beginPath(); c.arc(0, 0,  3, 0, Math.PI*2); c.fill();
+  c.restore();
+  c.globalAlpha = 1;
 }
 
-function drawBoss8() {
-  const pulse = 0.85 + Math.sin(bossTimer * 2.2) * 0.15;
-  ctx.save();
-  ctx.translate(boss.x, boss.y);
-  const outerR = boss.r * pulse;
-  const outerGlow = ctx.createRadialGradient(0, 0, outerR * 0.5, 0, 0, outerR * 1.4);
+function drawBoss8(c, b, angle, timer) {
+  const pulse = 0.85 + Math.sin(timer * 2.2) * 0.15;
+  c.save();
+  c.translate(b.x, b.y);
+  const outerR = b.r * pulse;
+  const outerGlow = c.createRadialGradient(0, 0, outerR * 0.5, 0, 0, outerR * 1.4);
   outerGlow.addColorStop(0, 'rgba(180,0,20,0.2)');
   outerGlow.addColorStop(1, 'rgba(80,0,10,0)');
-  ctx.fillStyle = outerGlow;
-  ctx.beginPath(); ctx.arc(0, 0, outerR * 1.4, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath();
+  c.fillStyle = outerGlow;
+  c.beginPath(); c.arc(0, 0, outerR * 1.4, 0, Math.PI*2); c.fill();
+  c.beginPath();
   for (let a = 0; a < Math.PI * 2; a += 0.1) {
-    const distort = 1 + Math.sin(a * 5 + bossTimer) * 0.08;
+    const distort = 1 + Math.sin(a * 5 + timer) * 0.08;
     const rx = Math.cos(a) * outerR * distort;
     const ry = Math.sin(a) * outerR * distort;
-    a === 0 ? ctx.moveTo(rx, ry) : ctx.lineTo(rx, ry);
+    a === 0 ? c.moveTo(rx, ry) : c.lineTo(rx, ry);
   }
-  ctx.closePath();
-  ctx.fillStyle = '#550010'; ctx.fill();
-  ctx.strokeStyle = '#bb0022'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.save(); ctx.rotate(-bossAngle * 0.5);
-  ctx.fillStyle = '#880022';
-  ctx.beginPath(); ctx.arc(0, 0, boss.r * 0.7, 0, Math.PI*2); ctx.fill();
+  c.closePath();
+  c.fillStyle = '#550010'; c.fill();
+  c.strokeStyle = '#bb0022'; c.lineWidth = 2; c.stroke();
+  c.save(); c.rotate(-angle * 0.5);
+  c.fillStyle = '#880022';
+  c.beginPath(); c.arc(0, 0, b.r * 0.7, 0, Math.PI*2); c.fill();
   for (let i = 0; i < 6; i++) {
-    ctx.save(); ctx.rotate(i * Math.PI / 3);
-    ctx.fillStyle = '#aa0033';
-    ctx.beginPath();
-    ctx.moveTo(-4, boss.r * 0.5); ctx.lineTo(0, boss.r * 0.72); ctx.lineTo(4, boss.r * 0.5);
-    ctx.closePath(); ctx.fill();
-    ctx.restore();
+    c.save(); c.rotate(i * Math.PI / 3);
+    c.fillStyle = '#aa0033';
+    c.beginPath();
+    c.moveTo(-4, b.r * 0.5); c.lineTo(0, b.r * 0.72); c.lineTo(4, b.r * 0.5);
+    c.closePath(); c.fill();
+    c.restore();
   }
-  ctx.restore();
-  const coreR = boss.r * 0.4 * pulse;
-  const coreGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, coreR);
+  c.restore();
+  const coreR = b.r * 0.4 * pulse;
+  const coreGrad = c.createRadialGradient(0, 0, 2, 0, 0, coreR);
   coreGrad.addColorStop(0, '#ffffff'); coreGrad.addColorStop(0.4, '#ff4444'); coreGrad.addColorStop(1, '#880000');
-  ctx.fillStyle = coreGrad;
-  ctx.beginPath(); ctx.arc(0, 0, coreR, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
+  c.fillStyle = coreGrad;
+  c.beginPath(); c.arc(0, 0, coreR, 0, Math.PI*2); c.fill();
+  c.restore();
 }
 
 function mkEB(b, g, vx, vy, clr, r = 5, ox = 0) {

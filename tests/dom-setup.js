@@ -22,6 +22,7 @@ const canvasEl = {
 
 globalThis.document = {
   getElementById: (id) => (id === 'c' ? canvasEl : null),
+  createElement: () => canvasEl,
   addEventListener() {},
 };
 globalThis.window = {
