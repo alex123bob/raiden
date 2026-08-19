@@ -6,7 +6,7 @@ function makeSpyContext() {
   const calls: string[] = [];
   const c = new Proxy({}, {
     get(t, prop) {
-      if (prop in t) return t[prop];
+      if (prop in t) return (t as Record<PropertyKey, unknown>)[prop];
       if (prop === 'createRadialGradient' || prop === 'createLinearGradient')
         return () => ({ addColorStop() {} });
       return (..._args: unknown[]) => { calls.push(String(prop)); return undefined; };

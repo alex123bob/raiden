@@ -36,7 +36,8 @@ export class CanvasRenderer implements RenderContext {
   private offCanvas: HTMLCanvasElement | null = null;
   private offSize = 0;
   constructor(private readonly c: CanvasRenderingContext2D) {}
-  withTint(tint, radius, bx, by, drawLocal) {
+  withTint(tint: string | null, radius: number, bx: number, by: number,
+           drawLocal: (c: CanvasRenderingContext2D) => void): void {
     if (!tint) {
       this.c.save(); this.c.translate(bx, by); drawLocal(this.c); this.c.restore();
       return;
@@ -55,41 +56,41 @@ export class CanvasRenderer implements RenderContext {
     oc.globalCompositeOperation = 'source-over';
     this.c.drawImage(this.offCanvas, bx - R, by - R);
   }
-  save() { this.c.save(); }
-  restore() { this.c.restore(); }
-  translate(x, y) { this.c.translate(x, y); }
-  rotate(a) { this.c.rotate(a); }
-  beginPath() { this.c.beginPath(); }
-  moveTo(x, y) { this.c.moveTo(x, y); }
-  lineTo(x, y) { this.c.lineTo(x, y); }
-  closePath() { this.c.closePath(); }
-  arc(x, y, r, s, e) { this.c.arc(x, y, r, s, e); }
-  ellipse(x, y, rx, ry, rot, s, e) { this.c.ellipse(x, y, rx, ry, rot, s, e); }
-  bezierCurveTo(a, b, c2, d, e, f) { this.c.bezierCurveTo(a, b, c2, d, e, f); }
-  fill() { this.c.fill(); }
-  stroke() { this.c.stroke(); }
-  fillRect(x, y, w, h) { this.c.fillRect(x, y, w, h); }
-  strokeRect(x, y, w, h) { this.c.strokeRect(x, y, w, h); }
-  drawImage(img, dx, dy) { this.c.drawImage(img, dx, dy); }
-  createRadialGradient(x0, y0, r0, x1, y1, r1) { return this.c.createRadialGradient(x0, y0, r0, x1, y1, r1); }
-  createLinearGradient(x0, y0, x1, y1) { return this.c.createLinearGradient(x0, y0, x1, y1); }
-  fillText(t, x, y) { this.c.fillText(t, x, y); }
+  save(): void { this.c.save(); }
+  restore(): void { this.c.restore(); }
+  translate(x: number, y: number): void { this.c.translate(x, y); }
+  rotate(a: number): void { this.c.rotate(a); }
+  beginPath(): void { this.c.beginPath(); }
+  moveTo(x: number, y: number): void { this.c.moveTo(x, y); }
+  lineTo(x: number, y: number): void { this.c.lineTo(x, y); }
+  closePath(): void { this.c.closePath(); }
+  arc(x: number, y: number, r: number, s: number, e: number): void { this.c.arc(x, y, r, s, e); }
+  ellipse(x: number, y: number, rx: number, ry: number, rot: number, s: number, e: number): void { this.c.ellipse(x, y, rx, ry, rot, s, e); }
+  bezierCurveTo(a: number, b: number, c2: number, d: number, e: number, f: number): void { this.c.bezierCurveTo(a, b, c2, d, e, f); }
+  fill(): void { this.c.fill(); }
+  stroke(): void { this.c.stroke(); }
+  fillRect(x: number, y: number, w: number, h: number): void { this.c.fillRect(x, y, w, h); }
+  strokeRect(x: number, y: number, w: number, h: number): void { this.c.strokeRect(x, y, w, h); }
+  drawImage(img: CanvasImageSource, dx: number, dy: number): void { this.c.drawImage(img, dx, dy); }
+  createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): CanvasGradient { return this.c.createRadialGradient(x0, y0, r0, x1, y1, r1); }
+  createLinearGradient(x0: number, y0: number, x1: number, y1: number): CanvasGradient { return this.c.createLinearGradient(x0, y0, x1, y1); }
+  fillText(t: string, x: number, y: number): void { this.c.fillText(t, x, y); }
   get fillStyle() { return this.c.fillStyle; }
-  set fillStyle(v) { this.c.fillStyle = v; }
+  set fillStyle(v: string | CanvasGradient | CanvasPattern) { this.c.fillStyle = v; }
   get strokeStyle() { return this.c.strokeStyle; }
-  set strokeStyle(v) { this.c.strokeStyle = v; }
+  set strokeStyle(v: string | CanvasGradient | CanvasPattern) { this.c.strokeStyle = v; }
   get lineWidth() { return this.c.lineWidth; }
-  set lineWidth(v) { this.c.lineWidth = v; }
+  set lineWidth(v: number) { this.c.lineWidth = v; }
   get globalAlpha() { return this.c.globalAlpha; }
-  set globalAlpha(v) { this.c.globalAlpha = v; }
+  set globalAlpha(v: number) { this.c.globalAlpha = v; }
   get shadowColor() { return this.c.shadowColor; }
-  set shadowColor(v) { this.c.shadowColor = v; }
+  set shadowColor(v: string) { this.c.shadowColor = v; }
   get shadowBlur() { return this.c.shadowBlur; }
-  set shadowBlur(v) { this.c.shadowBlur = v; }
+  set shadowBlur(v: number) { this.c.shadowBlur = v; }
   get font() { return this.c.font; }
-  set font(v) { this.c.font = v; }
+  set font(v: string) { this.c.font = v; }
   get textAlign() { return this.c.textAlign; }
-  set textAlign(v) { this.c.textAlign = v; }
+  set textAlign(v: CanvasTextAlign) { this.c.textAlign = v; }
   get textBaseline() { return this.c.textBaseline; }
-  set textBaseline(v) { this.c.textBaseline = v; }
+  set textBaseline(v: CanvasTextBaseline) { this.c.textBaseline = v; }
 }
