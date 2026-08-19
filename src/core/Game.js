@@ -10,6 +10,7 @@ import { drawEnemy, updateEnemies } from '../entities/Enemy.js';
 import { updatePowerups, drawPowerups } from '../entities/Powerup.js';
 import { drawBoss, updateBoss } from '../entities/Boss.js';
 import { runCollision } from './collision.js';
+import { STAGES } from '../stages/stageData.js';
 import { buildWaveTable, updateWaves } from '../stages/waveGen.js';
 import { drawHUD } from '../render/hud.js';
 import { drawTitle, drawPause, drawSettings, drawGameOver, drawStageClear, drawVictory } from '../render/screens.js';
@@ -69,7 +70,7 @@ export class Game {
     this.currentStage = stage;
     this.diffMult = diffMultFor(stage, this.loopMult);
     initBackground(stage);
-    this.waveTable = buildWaveTable(stage, this.diffMult);
+    this.waveTable = buildWaveTable(STAGES[stage - 1], this.diffMult);
     this.waveIndex = 0;
     this.stageTimer = 0;
     this.bossSpawned = false;
