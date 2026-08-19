@@ -1,4 +1,3 @@
-import { W } from '../config.js';
 import { mkEnemy } from '../entities/Enemy.js';
 import { createBoss } from '../entities/Boss.js'; // Task 14
 
