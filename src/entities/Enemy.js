@@ -3,8 +3,7 @@ import { ctx } from '../canvas.js';
 
 // === ENEMIES ===
 
-// diffMult: raised by stage 2 and each loop iteration (defined here, used by wave tables in Task 12)
-// (note: diffMult itself is now owned by Game via g.diffMult)
+// diffMult is owned by Game and accessed via g.diffMult (raised by stage and each loop iteration).
 
 export const ENEMY_CFG = [
   // type 0: small fighter
@@ -139,8 +138,10 @@ export function updateEnemies(dt, g) {
     if (e.fireTimer <= 0) {
       if (e.type === 3) {
         // [ARCADE] Turret stationary relative to scroll, fires only when player in range
-        const dx = g.player.x - e.x, dy = g.player.y - e.y;
-        if (dx*dx + dy*dy < 260*260) fireEnemy(e, g);
+        if (g.player && !g.player.dead) {
+          const dx = g.player.x - e.x, dy = g.player.y - e.y;
+          if (dx*dx + dy*dy < 260*260) fireEnemy(e, g);
+        }
       } else {
         fireEnemy(e, g);
       }
