@@ -1,74 +1,87 @@
 import { W, H, STATE, STAGE_COUNT } from '../config.js';
 import { ctx } from '../canvas.js';
+import type { GameContext } from './GameContext.js';
+import { CanvasRenderer, type RenderContext } from './Renderer.js';
+import { WebAudioBus, type AudioBus } from './audio.js';
 import { diffMultFor } from './difficulty.js';
 import { initBackground, updateStars, drawStars, updateBackground, drawBackground } from '../stages/background.js';
-import { updateParticles, drawParticles } from '../entities/Particle.js';
-import { createPlayer, drawPlayer, updatePlayer } from '../entities/Player.js';
-import { updatePlayerBullets, drawPlayerBullets,
-         updateEnemyBullets, drawEnemyBullets } from '../entities/Bullet.js';
+import { updateParticles, drawParticles, spawnParticleKind } from '../entities/Particle.js';
+import { createPlayer, updatePlayer, drawPlayer } from '../entities/Player.js';
+import { updatePlayerBullets, drawPlayerBullets, updateEnemyBullets, drawEnemyBullets } from '../entities/Bullet.js';
 import { updateEnemies } from '../entities/Enemy.js';
 import { updatePowerups, drawPowerups } from '../entities/Powerup.js';
+import type { Player } from '../entities/Player.js';
+import type { Enemy } from '../entities/Enemy.js';
+import type { Boss } from '../entities/Boss.js';
+import type { Bullet, EnemyBullet } from '../entities/Bullet.js';
+import type { Powerup } from '../entities/Powerup.js';
+import type { Particle } from '../entities/Particle.js';
 import { runCollision } from './collision.js';
 import { STAGES } from '../stages/stageData.js';
-import { buildWaveTable, updateWaves } from '../stages/waveGen.js';
+import { buildWaveTable, updateWaves, type WaveEntry } from '../stages/waveGen.js';
 import { drawHUD } from '../render/hud.js';
 import { drawTitle, drawPause, drawSettings, drawGameOver, drawStageClear, drawVictory } from '../render/screens.js';
 import { drawTouchControls } from './input.js';
-import { CanvasRenderer, type RenderContext } from './Renderer.js';
-import { WebAudioBus, type AudioBus } from './audio.js';
-import { spawnParticleKind } from '../entities/Particle.js';
 
-export class Game {
+export interface GameDeps {
+  renderer?: RenderContext;
+  audio?: AudioBus;
+}
+
+export class Game implements GameContext {
+  state = STATE.TITLE;
+  settingsOpen = false;
+  soundOn = true;
+  gameSpeed = 1.0;
+  score = 0;
+  highScore = parseInt(localStorage.getItem('raidenHS') || '0');
+  keys: Record<string, boolean> = {};
+  moveVec = { x: 0, y: 0 };
+  player: Player | null = null;
+  enemies: Enemy[] = [];
+  boss: Boss | null = null;
+  playerBullets: Bullet[] = [];
+  enemyBullets: EnemyBullet[] = [];
+  powerups: Powerup[] = [];
+  particles: Particle[] = [];
+  diffMult = 1.0;
+  loopMult = 1;
+  waveTable: WaveEntry[] = [];
+  waveIndex = 0;
+  stageTimer = 0;
+  currentStage = 1;
+  bossSpawned = false;
+  bossMaxHp = 0;
+  bossPhase = 0;
+  bossTimer = 0;
+  bossAngle = 0;
+  stageClearTimer = 0;
+  victoryTimer = 0;
+  lastTime = 0;
   readonly renderer: RenderContext;
   readonly audio: AudioBus;
+  private loopFn: (ts: number) => void;
 
-  constructor() {
-    this.renderer = new CanvasRenderer(ctx);
-    this.audio = new WebAudioBus();
-    this.state = STATE.TITLE;
-    this.settingsOpen = false;
-    this.soundOn = true;
-    this.gameSpeed = 1.0;
-    this.score = 0;
-    this.highScore = parseInt(localStorage.getItem('raidenHS') || '0');
-    this.keys = {};
-    this.moveVec = { x: 0, y: 0 };
-    this.player = null;
-    this.enemies = [];
-    this.boss = null;
-    this.playerBullets = [];
-    this.enemyBullets = [];
-    this.powerups = [];
-    this.particles = [];
-    this.diffMult = 1.0;
-    this.loopMult = 1;
-    this.waveTable = [];
-    this.waveIndex = 0;
-    this.stageTimer = 0;
-    this.currentStage = 1;
-    this.bossSpawned = false;
-    this.bossMaxHp = 0;
-    this.bossPhase = 0;
-    this.bossTimer = 0;
-    this.bossAngle = 0;
-    this.stageClearTimer = 0;
-    this.victoryTimer = 0;
-    this.lastTime = 0;
-    this.loop = this.loop.bind(this);
+  constructor(deps: GameDeps = {}) {
+    this.renderer = deps.renderer ?? new CanvasRenderer(ctx);
+    this.audio = deps.audio ?? new WebAudioBus();
+    this.audio.setEnabled(this.soundOn);
+    this.loopFn = (ts) => this.loop(ts);
   }
 
-  spawnParticles(kind: string, x: number, y: number, opts?: Record<string, unknown>): void {
-    spawnParticleKind(kind, x, y, opts ?? {}, this);
+  toggleSound(): void {
+    this.soundOn = !this.soundOn;
+    this.audio.setEnabled(this.soundOn);
   }
 
-  saveHS() {
+  saveHS(): void {
     if (this.score > this.highScore) {
       this.highScore = this.score;
-      localStorage.setItem('raidenHS', this.highScore);
+      localStorage.setItem('raidenHS', String(this.highScore));
     }
   }
 
-  startGame() {
+  startGame(): void {
     this.score = 0;
     this.player = createPlayer();
     this.particles.length = 0;
@@ -77,10 +90,10 @@ export class Game {
     this.state = STATE.PLAYING;
   }
 
-  startStage(stage) {
+  startStage(stage: number): void {
     this.currentStage = stage;
     this.diffMult = diffMultFor(stage, this.loopMult);
-    initBackground(stage);
+    initBackground(stage);   // old one-argument signature until Task 12
     this.waveTable = buildWaveTable(STAGES[stage - 1], this.diffMult);
     this.waveIndex = 0;
     this.stageTimer = 0;
@@ -92,7 +105,11 @@ export class Game {
     this.powerups.length = 0;
   }
 
-  updateStageClear(dt) {
+  spawnParticles(kind: string, x: number, y: number, opts?: Record<string, unknown>): void {
+    spawnParticleKind(kind, x, y, opts ?? {}, this);
+  }
+
+  updateStageClear(dt: number): void {
     this.stageClearTimer -= dt;
     if (this.stageClearTimer <= 0) {
       this.startStage(this.currentStage + 1);
@@ -100,15 +117,16 @@ export class Game {
     }
   }
 
-  updateVictory(dt) { /* victory stays until Enter */ }
+  updateVictory(_dt: number): void { /* victory stays until Enter */ }
 
-  loop(ts) {
-    requestAnimationFrame(this.loop);
+  loop(ts: number): void {
+    requestAnimationFrame(this.loopFn);
     const rawDt = Math.min((ts - this.lastTime) / 1000, 0.05);
     this.lastTime = ts;
     const dt = rawDt * this.gameSpeed;
 
-    // Update
+    // NOTE: background.ts is still the old ctx-singleton module until Task 12,
+    // so these are the OLD one-argument signatures. Task 12 switches them.
     if (this.state !== STATE.PAUSED) updateStars(dt);
     if (this.state === STATE.PLAYING || this.state === STATE.STAGECLEAR) updateBackground(dt);
     if (this.state === STATE.PLAYING || this.state === STATE.STAGECLEAR) updateParticles(dt, this);
@@ -125,7 +143,6 @@ export class Game {
       updateWaves(dt, this);
     }
 
-    // Render
     ctx.textAlign = 'left';
     ctx.shadowBlur = 0;
     ctx.shadowColor = 'transparent';
