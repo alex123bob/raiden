@@ -21,7 +21,7 @@ describe('boss pattern data', () => {
   it('every stage has a boss with patterns covering all phases', () => {
     for (let s = 1; s <= STAGES.length; s++) {
       const boss = STAGES[s - 1].boss;
-      expect(boss.patterns.length).toBeGreaterThanOrEqual(phaseCountForStage(s));
+      expect(boss.patterns.length).toBe(phaseCountForStage(s));
       for (const entry of boss.patterns) {
         const list = Array.isArray(entry) ? entry : [entry];
         for (const p of list) {

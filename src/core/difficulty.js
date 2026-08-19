@@ -40,7 +40,7 @@ export function bossHpForStage(stage) {
 
 export function phaseCountForStage(stage) {
   if (stage >= 15) return 6;
-  if (stage >= 10) return 5;
+  if (stage >= 8) return 5;
   if (stage >= 6) return 4;
   return 3;
 }

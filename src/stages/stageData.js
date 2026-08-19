@@ -322,6 +322,7 @@ export const STAGES = [
         { name: 'aimSpread',  spdBase: 190, spdPhase: 30, count: 5,  gap: 0.16, clr: '#44ddff' },
         { name: 'ring',       spdBase: 190, spdPhase: 30, count: 12, clr: '#44ddff' },
         { name: 'aimBurst',   spdBase: 190, spdPhase: 30, offsets: [-0.10, 0, 0.10], clr: '#88eeff' },
+        { name: 'laserSweep', spdBase: 190, spdPhase: 30, count: 7, halfSpan: 0.40, spdF: 0.85, clr: '#44ddff' },
       ],
     },
   },

@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   diffMultFor, enemyHpScale, fireIntervalScale, extraBulletStreams,
-  bossHpForStage, phaseCountForStage,
+  bossHpForStage, phaseCountForStage, DIFF_CURVE,
 } from '../src/core/difficulty.js';
+import { STAGE_COUNT } from '../src/config.js';
 
 describe('difficulty', () => {
   it('ramps diffMult from 1.0 toward ~3.6, steepening past stage 8', () => {
@@ -51,5 +52,9 @@ describe('difficulty', () => {
     expect(phaseCountForStage(10)).toBe(5);
     expect(phaseCountForStage(15)).toBe(6);
     expect(phaseCountForStage(18)).toBe(6);
+  });
+
+  it('DIFF_CURVE has one entry per stage (matches STAGE_COUNT)', () => {
+    expect(DIFF_CURVE.length).toBe(STAGE_COUNT);
   });
 });
