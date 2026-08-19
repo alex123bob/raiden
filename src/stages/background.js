@@ -192,11 +192,12 @@ export function updateBackground(dt) {
 export function drawBackground(g) {
   const stage = g.currentStage;
   const cfg = STAGES[Math.max(0, Math.min(STAGES.length - 1, stage - 1))].bg;
-  const feat = stageFeatures(stage);
+  const feat = cfg.features || [];
   ctx.fillStyle = cfg.baseFill;
   ctx.fillRect(0, 0, W, H);
 
   if (cfg.starColor) {
+    // Save current colors so the title screen's classic starfield isn't left tinted
     const savedColors = STAR_LAYERS.map(l => l.color);
     STAR_LAYERS[0].color = cfg.starColor[0];
     STAR_LAYERS[1].color = cfg.starColor[1];
