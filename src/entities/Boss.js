@@ -5,6 +5,8 @@ import { mkEnemy, ENEMY_CFG } from './Enemy.js';
 
 // === BOSS ===
 
+// TEMPORARY (Phase A scaffolding; Task 24 removes these aliases and
+// parameterizes drawBossN/fireBossN with explicit (ctx, boss, angle, timer)):
 // Module-level aliases mirroring the shared boss state. Entry points copy
 // g.* into the aliases before dispatching so the drawBossN/fireBossN bodies
 // below stay byte-identical to the source (they reference the bare names).
@@ -493,8 +495,9 @@ export function updateBoss(dt, g) {
 }
 
 export function spawnMinion(g) {
-  if (!boss) return;
-  const e = mkEnemy(0, boss.x + (Math.random()-0.5)*40, boss.y + 20, null);
+  const b = g.boss;
+  if (!b) return;
+  const e = mkEnemy(0, b.x + (Math.random()-0.5)*40, b.y + 20, null);
   e.spd = ENEMY_CFG[0].spd * g.diffMult * 1.2;
   g.enemies.push(e);
 }
