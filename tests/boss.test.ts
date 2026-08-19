@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { STAGES } from '../src/stages/stageData.js';
 import { Boss, createBoss } from '../src/entities/Boss.js';
-import { BOSS_TYPES, type PhaseEntry } from '../src/registries/bosses/index.js';
+import { BOSS_TYPES, type PhasePattern } from '../src/registries/bosses/index.js';
 import { BULLET_PATTERNS } from '../src/registries/bullets/patterns.js';
 import { bossHpForStage, phaseCountForStage } from '../src/core/difficulty.js';
 import { CanvasRenderer, type RenderContext } from '../src/core/Renderer.js';
@@ -32,7 +32,7 @@ describe('boss pattern data', () => {
       const boss = STAGES[s - 1].boss;
       expect(boss.patterns.length).toBe(phaseCountForStage(s));
       for (const entry of boss.patterns) {
-        const list: PhaseEntry[] = Array.isArray(entry) ? entry : [entry];
+        const list: PhasePattern[] = Array.isArray(entry) ? entry : [entry];
         for (const p of list) {
           expect(p.name, `stage ${s} pattern name`).toBeDefined();
           expect(REQUIRED[p.name], `stage ${s} unknown pattern ${p.name}`).toBeDefined();
@@ -126,7 +126,7 @@ describe('boss draw paths', () => {
       let calls = 0;
       const c = new Proxy({} as Record<string, unknown>, {
         get(t, prop) {
-          if (prop in t) return t[prop];
+          if (prop in t) return (t as Record<PropertyKey, unknown>)[prop];
           if (prop === 'createRadialGradient' || prop === 'createLinearGradient')
             return () => ({ addColorStop() {} });
           return (..._a: unknown[]) => { calls++; return undefined; };

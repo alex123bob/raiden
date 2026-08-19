@@ -26,7 +26,7 @@ describe('enemy difficulty levers', () => {
   it('updateEnemies applies the fire-interval scale for turrets', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     const g = stubContext({ currentStage: 18, diffMult: 1 });
-    g.player.x = 240; g.player.y = 200;
+    g.player!.x = 240; g.player!.y = 200;
     const e = new Enemy(ENEMY_TYPES.get('turret')!, 240, 220, null);
     e.fireTimer = 0;
     g.enemies.push(e);
@@ -49,7 +49,7 @@ describe('enemy difficulty levers', () => {
 
   it('turret only fires in range and staggers its 3-shot burst', () => {
     const g = stubContext();
-    g.player.x = 240; g.player.y = 500;   // dist 280 > 260 -> out of range
+    g.player!.x = 240; g.player!.y = 500;   // dist 280 > 260 -> out of range
     const far = new Enemy(ENEMY_TYPES.get('turret')!, 240, 220, null);
     far.fireTimer = 0;
     g.enemies.push(far);
@@ -57,7 +57,7 @@ describe('enemy difficulty levers', () => {
     expect(g.enemyBullets.length).toBe(0);
 
     g.enemyBullets.length = 0;
-    g.player.x = 240; g.player.y = 200;   // dist 20 < 260 -> in range
+    g.player!.x = 240; g.player!.y = 200;   // dist 20 < 260 -> in range
     const near = new Enemy(ENEMY_TYPES.get('turret')!, 240, 220, null);
     near.fireTimer = 0;
     g.enemies.push(near);
@@ -69,7 +69,7 @@ describe('enemy difficulty levers', () => {
 
   it('turret barrel tracks the player', () => {
     const g = stubContext();
-    g.player.x = 240; g.player.y = 180;   // directly above the turret
+    g.player!.x = 240; g.player!.y = 180;   // directly above the turret
     const e = new Enemy(ENEMY_TYPES.get('turret')!, 240, 220, null);
     e.update(1 / 60, g);
     expect(e.angle).toBeCloseTo(0, 5);    // atan2(0, 40) = 0 -> points up

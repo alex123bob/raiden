@@ -28,9 +28,10 @@ describe('buildWaveTable', () => {
 
   it('scales path speed by diffMult', () => {
     const table = buildWaveTable(STAGES[0], 2.0);
-    const form = table.find(e => e.type === 'fighter');
-    const p0 = form.path(0);
-    const p1 = form.path(1);
+    const form = table.find(e => e.type === 'fighter')!;
+    const path = form.path!;
+    const p0 = path(0);
+    const p1 = path(1);
     expect(p1.y - p0.y).toBeCloseTo(105 * 2.0);   // stage 1 formation factor 105
   });
 });

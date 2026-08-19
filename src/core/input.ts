@@ -40,7 +40,7 @@ function handleKeyPress(g: Game, code: string) {
   }
   if (code === 'KeyC' && g.state === STATE.GAMEOVER) {
     const nc = navigator.clipboard;
-    if (nc) nc.writeText('RAIDEN — Score: ' + g.score + ' | Hi: ' + g.highScore);
+    if (nc) nc.writeText('RAIDEN — Score: ' + g.score + ' | Hi: ' + g.highScore).catch(() => {});
   }
 }
 
@@ -69,7 +69,7 @@ const STICK_DEAD = 0.14;                     // deadzone (fraction of travel)
 const STICK_HOME = { x: 96, y: H - 108 };    // resting display position
 const stick: { id: number | null; bx: number; by: number; kx: number; ky: number } =
   { id: null, bx: 0, by: 0, kx: 0, ky: 0 };
-const roles: Record<string, string> = {};    // touch identifier -> 'fire' | 'bomb'
+const roles: Record<string, 'fire' | 'bomb'> = {};    // touch identifier -> 'fire' | 'bomb'
 let firePressed = false;                     // glow flags for drawing
 let bombPressed = false;
 

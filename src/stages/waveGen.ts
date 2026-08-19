@@ -21,9 +21,9 @@ export const MOTION = new Map<string, (desc: number[], diffMult: number) => Path
 export function registerMotion(kind: string, builder: (desc: number[], diffMult: number) => PathFn): void {
   MOTION.set(kind, builder);
 }
-registerMotion('down', (desc, diffMult) => pathDown(desc[1], desc[2], desc[3] * diffMult));
-registerMotion('sin',  (desc, diffMult) => pathSin(desc[1], desc[2], desc[3] * diffMult, desc[4], desc[5]));
-registerMotion('form', (desc, diffMult) => pathFormation(desc[1], desc[2], desc[3] * diffMult, desc[4], desc[5]));
+registerMotion('down', (desc, diffMult) => pathDown(desc[0], desc[1], desc[2] * diffMult));
+registerMotion('sin',  (desc, diffMult) => pathSin(desc[0], desc[1], desc[2] * diffMult, desc[3], desc[4]));
+registerMotion('form', (desc, diffMult) => pathFormation(desc[0], desc[1], desc[2] * diffMult, desc[3], desc[4]));
 
 interface WaveDescriptor {
   t: number;
@@ -31,15 +31,17 @@ interface WaveDescriptor {
   type?: string;
   x?: number;
   y?: number;
-  path?: number[];
+  path?: (string | number)[];
   elite?: boolean;
 }
 
-function expandPath(desc: number[], diffMult: number): PathFn {
+function expandPath(desc: (string | number)[], diffMult: number): PathFn {
   if (!Array.isArray(desc) || desc.length < 4) throw new Error('bad path descriptor: ' + JSON.stringify(desc));
-  const builder = MOTION.get(desc[0]);
-  if (!builder) throw new Error('unknown path kind: ' + desc[0]);
-  return builder(desc, diffMult);
+  const kind = desc[0];
+  if (typeof kind !== 'string') throw new Error('bad path kind: ' + String(kind));
+  const builder = MOTION.get(kind);
+  if (!builder) throw new Error('unknown path kind: ' + kind);
+  return builder(desc.slice(1) as number[], diffMult);
 }
 
 export interface WaveEntry {
