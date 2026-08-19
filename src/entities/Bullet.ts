@@ -67,6 +67,7 @@ export function mkBullet(kindKey: 'vulcan' | 'spread' | 'missile', x: number, y:
   const b = new Bullet(kind, x, y, Math.cos(angle) * spd, Math.sin(angle) * spd);
   b.angle = angle;
   b.life = 2.0;
+  b.dmg = kindKey === 'vulcan' ? 5 : kindKey === 'spread' ? 10 : 8;
   return b;
 }
 
