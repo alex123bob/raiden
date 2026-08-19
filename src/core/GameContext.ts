@@ -27,6 +27,8 @@ export interface GameContext {
   bossAngle: number;
   bossTimer: number;
   stageTimer: number;
+  stageClearTimer: number;
+  victoryTimer: number;
   score: number;
   audio: AudioBus;
   spawnParticles(kind: string, x: number, y: number, opts?: Record<string, unknown>): void;
