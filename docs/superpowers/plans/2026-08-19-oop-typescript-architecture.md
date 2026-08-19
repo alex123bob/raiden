@@ -2479,7 +2479,7 @@ const form = table.find(e => e.type === 'fighter');   // was: e.type === 0
 
 - [ ] **Step 6: Verify suite green**
 
-Run: `npm test` — Expected: PASS (49 tests). Smoke exercises enemies + wave spawning + turret in-range firing end-to-end.
+Run: `npm test` — Expected: PASS (54 tests). Smoke exercises enemies + wave spawning + turret in-range firing end-to-end.
 
 - [ ] **Step 7: Commit**
 
@@ -2967,7 +2967,7 @@ Delete the `spawnExplosion`/`spawnBombFlash` backward-compat wrappers from `src/
 
 - [ ] **Step 6: Verify suite green**
 
-Run: `npm test` — Expected: PASS (49 tests). Smoke plays TITLE→boss→STAGECLEAR→next stage and VICTORY/loop with the class-based boss.
+Run: `npm test` — Expected: PASS (54 tests). Smoke plays TITLE→boss→STAGECLEAR→next stage and VICTORY/loop with the class-based boss.
 
 - [ ] **Step 7: Commit**
 
@@ -3267,7 +3267,7 @@ describe('game smoke test (real module graph, stubbed DOM)', () => {
 
 - [ ] **Step 3: Verify suite green**
 
-Run: `npm test` — Expected: PASS (49 tests).
+Run: `npm test` — Expected: PASS (54 tests).
 
 - [ ] **Step 4: Commit**
 
@@ -3496,7 +3496,7 @@ initBackground(stage, this);           // in startStage
 
 - [ ] **Step 4: Verify suite green**
 
-Run: `npm test` — Expected: PASS (49 tests). Smoke renders every screen state, which drives `drawBackground`/`updateStars`/`drawStars` with the feature registry.
+Run: `npm test` — Expected: PASS (54 tests). Smoke renders every screen state, which drives `drawBackground`/`updateStars`/`drawStars` with the feature registry.
 
 - [ ] **Step 5: Commit**
 
@@ -3576,7 +3576,7 @@ and add `import type { WaveEntry } from '../src/stages/waveGen.js';` for the `wa
 
 - [ ] **Step 6: Verify suite green**
 
-Run: `npm test` — Expected: PASS (49 tests).
+Run: `npm test` — Expected: PASS (54 tests).
 
 - [ ] **Step 7: Commit**
 
@@ -3684,7 +3684,7 @@ Edit `.github/workflows/pages.yml` so the build job runs typecheck before the te
 Run:
 ```bash
 npm run typecheck    # must exit 0
-npm test             # must be green (49 tests; 51 after the extensibility test)
+npm test             # must be green (54 tests; 51 after the extensibility test)
 npm run build        # must emit the single-file bundle
 ```
 

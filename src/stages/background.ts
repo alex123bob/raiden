@@ -37,7 +37,11 @@ let activeFeatures: BackgroundFeature[] = [];
 export function initBackground(stage: number, _ctx: GameContext): void {
   const stageDef = STAGES[Math.max(0, Math.min(STAGES.length - 1, stage - 1))];
   const featKeys = stageDef.bg.features || [];
-  activeFeatures = featKeys.map(k => new BackgroundFeature(BG_FEATURES.get(k)!, stage));
+  activeFeatures = featKeys.flatMap(k => {
+    const def = BG_FEATURES.get(k);
+    if (!def) { console.warn('unknown background feature: ' + k); return []; }
+    return [new BackgroundFeature(def, stage)];
+  });
 }
 
 export function updateBackground(dt: number, ctx: GameContext): void {
