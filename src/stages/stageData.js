@@ -7,7 +7,7 @@ import { W } from '../config.js';
 //       - spd is the RAW speed factor; waveGen multiplies by diffMult.
 //     { t, type: 3, x, y }            stationary turret
 //     { t, boss: N }                  boss trigger (N = stage number)
-//     elite: true  ->  runtime eliteHp (1.5x hp), used on stage 8 regulars
+//     elite: true  ->  runtime eliteHp (1.5x hp), used on stage 8 and stages 15-18 regulars
 //   enemy type: 0=small fighter, 1=gunship, 2=bomber, 3=turret
 //   bg.features vocabulary: rocks | clouds | bubbles | streaks | hulls | wisps | walls ([] = stars only)
 export const STAGES = [

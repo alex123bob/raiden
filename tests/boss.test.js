@@ -17,8 +17,8 @@ const NEEDS_1 = ['aimSpread', 'ring', 'laserSweep', 'scatter'];   // spdBase req
 const NEEDS_2 = ['aimBurst'];                                      // spdBase required
 
 describe('boss pattern data', () => {
-  it('every stage 1-8 has a boss with patterns covering all phases', () => {
-    for (let s = 1; s <= 8; s++) {
+  it('every stage has a boss with patterns covering all phases', () => {
+    for (let s = 1; s <= STAGES.length; s++) {
       const boss = STAGES[s - 1].boss;
       expect(boss.patterns.length).toBeGreaterThanOrEqual(boss.phaseCount);
       for (const entry of boss.patterns) {
@@ -29,13 +29,16 @@ describe('boss pattern data', () => {
           for (const k of REQUIRED[p.name]) {
             expect(p[k], `stage ${s} ${p.name} missing ${k}`).toBeDefined();
           }
+          if (p.name === 'laserSweep') {
+            expect(p.count, `stage ${s} laserSweep count`).toBeGreaterThan(1);
+          }
         }
       }
     }
   });
 
-  it('every stage 1-8 has spdBase and non-negative spdPhase', () => {
-    for (let s = 1; s <= 8; s++) {
+  it('every stage has spdBase and non-negative spdPhase', () => {
+    for (let s = 1; s <= STAGES.length; s++) {
       for (const entry of STAGES[s - 1].boss.patterns) {
         const list = Array.isArray(entry) ? entry : [entry];
         for (const p of list) {

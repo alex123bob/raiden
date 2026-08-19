@@ -3,12 +3,13 @@ import { buildWaveTable } from '../src/stages/waveGen.js';
 import { STAGES } from '../src/stages/stageData.js';
 
 describe('buildWaveTable', () => {
-  it('produces a t-sorted table ending with the stage boss for every stage 1-8', () => {
-    for (let s = 1; s <= 8; s++) {
+  it('produces a t-sorted table ending with the stage boss for every stage 1-18', () => {
+    for (let s = 1; s <= STAGES.length; s++) {
       const table = buildWaveTable(STAGES[s - 1], 1.0);
       const ts = table.map(e => e.t);
       expect(ts).toEqual([...ts].sort((a, b) => a - b));
       expect(table[table.length - 1].boss).toBe(s);
+      expect(table.length).toBeGreaterThan(0);
     }
   });
 
