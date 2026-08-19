@@ -3,7 +3,7 @@
 const gradient = { addColorStop() {} };
 const ctxStub = new Proxy({}, {
   get(t, prop) {
-    if (prop in t) return t[prop];
+    if (prop in t) return (t as Record<PropertyKey, unknown>)[prop];
     if (prop === 'createRadialGradient' || prop === 'createLinearGradient')
       return () => gradient;
     if (prop === 'canvas') return {};
