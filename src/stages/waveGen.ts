@@ -70,9 +70,8 @@ export function updateWaves(dt: number, ctx: GameContext): void {
   if (ctx.boss) return;
   ctx.stageTimer += dt;
 
-  const waveTable = (ctx as GameContext & { waveTable: WaveEntry[] }).waveTable;
-  while (ctx.waveIndex < waveTable.length) {
-    const entry = waveTable[ctx.waveIndex];
+  while (ctx.waveIndex < ctx.waveTable.length) {
+    const entry = ctx.waveTable[ctx.waveIndex];
     if (ctx.stageTimer < entry.t) break;
     ctx.waveIndex++;
 

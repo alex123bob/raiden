@@ -17,28 +17,28 @@ export const STREAM_MILESTONES = [4, 8, 12, 16];
 export const BOSS_BASE_HP = 800;
 export const BOSS_HP_STEP = 0.27;
 
-export function diffMultFor(stage, loopMult) {
+export function diffMultFor(stage: number, loopMult: number) {
   const i = Math.max(0, Math.min(stage - 1, DIFF_CURVE.length - 1));
   return DIFF_CURVE[i] * (1 + (loopMult - 1) * LOOP_STACK);
 }
 
-export function enemyHpScale(stage) {
+export function enemyHpScale(stage: number) {
   return 1 + (stage - 1) * HP_PER_STAGE;
 }
 
-export function fireIntervalScale(stage) {
+export function fireIntervalScale(stage: number) {
   return Math.pow(FIRERATE_DECAY, stage - 1);
 }
 
-export function extraBulletStreams(stage) {
+export function extraBulletStreams(stage: number) {
   return STREAM_MILESTONES.filter(s => stage >= s).length;
 }
 
-export function bossHpForStage(stage) {
+export function bossHpForStage(stage: number) {
   return Math.round(BOSS_BASE_HP * (1 + (stage - 1) * BOSS_HP_STEP));
 }
 
-export function phaseCountForStage(stage) {
+export function phaseCountForStage(stage: number) {
   if (stage >= 15) return 6;
   if (stage >= 8) return 5;
   if (stage >= 6) return 4;

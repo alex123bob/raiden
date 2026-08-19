@@ -5,6 +5,7 @@ import type { Bullet, EnemyBullet } from '../entities/Bullet.js';
 import type { Powerup } from '../entities/Powerup.js';
 import type { Particle } from '../entities/Particle.js';
 import type { AudioBus } from './audio.js';
+import type { WaveEntry } from '../stages/waveGen.js';
 
 // The typed `g`: exactly the fields the current code reads, declared as a
 // contract so Game implements it and test stubs are compiler-checked.
@@ -22,6 +23,9 @@ export interface GameContext {
   currentStage: number;
   diffMult: number;
   loopMult: number;
+  waveTable: WaveEntry[];
+  waveIndex: number;
+  bossSpawned: boolean;
   bossMaxHp: number;
   bossPhase: number;
   bossAngle: number;

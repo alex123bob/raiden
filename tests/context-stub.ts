@@ -1,4 +1,5 @@
 import type { GameContext } from '../src/core/GameContext.js';
+import type { WaveEntry } from '../src/stages/waveGen.js';
 import { SilentBus } from '../src/core/audio.js';
 import { Player } from '../src/entities/Player.js';
 import { spawnParticleKind } from '../src/entities/Particle.js';
@@ -18,6 +19,9 @@ export function stubContext(overrides: Partial<GameContext> = {}): GameContext {
     currentStage: 1,
     diffMult: 1.0,
     loopMult: 1,
+    waveTable: [] as WaveEntry[],
+    waveIndex: 0,
+    bossSpawned: false,
     bossMaxHp: 0,
     bossPhase: 0,
     bossAngle: 0,

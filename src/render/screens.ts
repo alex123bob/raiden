@@ -1,9 +1,10 @@
 import { W, H } from '../config.js';
 import { ctx } from '../canvas.js';
 import { isTouch } from '../core/input.js';
+import type { Game } from '../core/Game.js';
 
 // === SCREENS ===
-export function drawTitle(g) {
+export function drawTitle(g: Game) {
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
   ctx.fillRect(0, 0, W, H);
 
@@ -40,7 +41,7 @@ export function drawTitle(g) {
   }
 }
 
-export function drawPause(g) {
+export function drawPause(g: Game) {
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#ffffff';
@@ -52,7 +53,7 @@ export function drawPause(g) {
   ctx.fillText('P to resume', W/2, H/2 + 24);
 }
 
-export function drawSettings(g) {
+export function drawSettings(g: Game) {
   const bx = W/2 - 130, by = H/2 - 90, bw = 260, bh = 185;
   ctx.fillStyle = 'rgba(0,10,30,0.94)';
   ctx.fillRect(bx, by, bw, bh);
@@ -76,7 +77,7 @@ export function drawSettings(g) {
   ctx.fillText('S to close', W/2, by + 150);
 }
 
-export function drawGameOver(g) {
+export function drawGameOver(g: Game) {
   ctx.fillStyle = 'rgba(0,0,0,0.82)';
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#ff4444';
@@ -92,7 +93,7 @@ export function drawGameOver(g) {
   ctx.fillText('ENTER → title    C → copy score', W/2, 405);
 }
 
-export function drawStageClear(g) {
+export function drawStageClear(g: Game) {
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#ffff44';
@@ -108,7 +109,7 @@ export function drawStageClear(g) {
   ctx.fillText('STAGE ' + (g.currentStage + 1) + ' INCOMING...', W/2, H/2 + 30);
 }
 
-export function drawVictory(g) {
+export function drawVictory(g: Game) {
   ctx.fillStyle = 'rgba(0,0,0,0.85)';
   ctx.fillRect(0, 0, W, H);
   ctx.shadowColor = '#ffcc00';

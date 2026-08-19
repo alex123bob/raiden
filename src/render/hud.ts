@@ -1,9 +1,11 @@
 import { W, H } from '../config.js';
 import { ctx } from '../canvas.js';
 import { WEAPON_NAMES, WEAPON_COLORS } from '../entities/Bullet.js';
+import type { Game } from '../core/Game.js';
 
 // === HUD ===
-export function drawHUD(g) {
+export function drawHUD(g: Game) {
+  const p = g.player!;
   ctx.save();
   ctx.textBaseline = 'alphabetic';
 
@@ -28,21 +30,21 @@ export function drawHUD(g) {
   ctx.fillStyle = '#88ccff';
   ctx.font = '13px monospace';
   ctx.textAlign = 'left';
-  for (let i = 0; i < g.player.lives; i++) ctx.fillText('\u25c6', 8 + i * 14, H - 8);
+  for (let i = 0; i < p.lives; i++) ctx.fillText('\u25c6', 8 + i * 14, H - 8);
 
   // Bomb icons (above lives row)
   ctx.fillStyle = '#ff88ff';
-  for (let i = 0; i < g.player.bombs; i++) ctx.fillText('\u2605', 8 + i * 14, H - 24);
+  for (let i = 0; i < p.bombs; i++) ctx.fillText('\u2605', 8 + i * 14, H - 24);
 
   // Weapon name + level (bottom-right)
   ctx.textAlign = 'right';
   ctx.font = '12px monospace';
-  const wSlots = g.player.weapons;
+  const wSlots = p.weapons;
   if (wSlots.length === 1) {
     ctx.fillStyle = WEAPON_COLORS[wSlots[0].type];
     ctx.fillText(WEAPON_NAMES[wSlots[0].type] + ' Lv' + wSlots[0].lv, W - 8, H - 8);
   } else {
-    wSlots.forEach((slot, i) => {
+    wSlots.forEach((slot: { type: number; lv: number }, i: number) => {
       ctx.fillStyle = WEAPON_COLORS[slot.type];
       ctx.fillText(WEAPON_NAMES[slot.type] + ' Lv' + slot.lv, W - 8, H - 8 - i * 16);
     });

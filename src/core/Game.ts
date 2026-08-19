@@ -94,7 +94,7 @@ export class Game implements GameContext {
     this.currentStage = stage;
     this.diffMult = diffMultFor(stage, this.loopMult);
     initBackground(stage, this);
-    this.waveTable = buildWaveTable(STAGES[stage - 1], this.diffMult);
+    this.waveTable = buildWaveTable(STAGES[stage - 1] as unknown as Parameters<typeof buildWaveTable>[0], this.diffMult);
     this.waveIndex = 0;
     this.stageTimer = 0;
     this.bossSpawned = false;

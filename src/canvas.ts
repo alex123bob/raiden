@@ -1,7 +1,7 @@
 import { W, H } from './config.js';
 
-export const canvas = document.getElementById('c');
-export const ctx = canvas.getContext('2d');
+export const canvas = document.getElementById('c') as HTMLCanvasElement;
+export const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 canvas.width = W;
 canvas.height = H;
 
