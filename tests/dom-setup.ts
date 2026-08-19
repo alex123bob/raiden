@@ -38,3 +38,7 @@ Object.defineProperty(globalThis, 'navigator', { value: {}, configurable: true }
 let rafCb: ((ts: number) => void) | null = null;
 globalThis.requestAnimationFrame = (cb: (ts: number) => void) => { rafCb = cb; return 1; };
 globalThis.cancelAnimationFrame = () => {};
+
+export function fireRaf(ts: number): void {
+  if (rafCb) rafCb(ts);
+}

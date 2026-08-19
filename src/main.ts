@@ -10,4 +10,4 @@ console.log(`[RAIDEN] v${VERSION}${sha ? ` — commit ${sha}` : ' (dev)'}`);
 
 const game = new Game();
 initInput(game);
-requestAnimationFrame(ts => { game.lastTime = ts; requestAnimationFrame(game.loop); });
+requestAnimationFrame(ts => { game.lastTime = ts; requestAnimationFrame(t => game.loop(t)); });

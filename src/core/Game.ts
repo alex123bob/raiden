@@ -1,4 +1,4 @@
-import { W, H, STATE, STAGE_COUNT } from '../config.js';
+import { W, H, STATE } from '../config.js';
 import { ctx } from '../canvas.js';
 import type { GameContext } from './GameContext.js';
 import { CanvasRenderer, type RenderContext } from './Renderer.js';

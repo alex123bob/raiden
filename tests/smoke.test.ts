@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { Game } from '../src/core/Game.js';
 import { CanvasRenderer } from '../src/core/Renderer.js';
 import { SilentBus } from '../src/core/audio.js';
-import { noopCtx } from './dom-setup.js';
+import { noopCtx, fireRaf } from './dom-setup.js';
 
 function newGame() {
   return new Game({ renderer: new CanvasRenderer(noopCtx), audio: new SilentBus() });
@@ -84,5 +84,12 @@ describe('game smoke test (real module graph, stubbed DOM)', () => {
       scene();
       expect(() => g4.loop(ts += 1000 / 60)).not.toThrow();
     }
+  });
+
+  it('boots through the real rAF wiring (main.js entry) without an unbound-loop crash', () => {
+    // The main.js boot module registered its rAF callback (via dom-setup's stub).
+    // Firing it exercises the real requestAnimationFrame -> game.loop path, which
+    // would throw if loop were ever passed unbound.
+    expect(() => { fireRaf(1000); fireRaf(1000 + 1000 / 60); }).not.toThrow();
   });
 });
