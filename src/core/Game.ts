@@ -145,7 +145,7 @@ export class Game {
       this.enemies.forEach(drawEnemy);
       drawBoss(this);
       drawEnemyBullets(this);
-      drawPowerups(this);
+      drawPowerups(this.renderer, this);
       drawPlayerBullets(this);
       drawPlayer(this.player);
       drawLaserBeam(this.player);
