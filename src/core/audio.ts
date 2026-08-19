@@ -26,9 +26,11 @@ export class WebAudioBus implements AudioBus {
     if (!this.enabled) return;
     const def = SFX.get(sfxKey);
     if (!def) return;
-    const ac = getAudio();
-    if (!ac) return;
-    try { def.play(ac, opts ?? {}); } catch { /* ignore */ }
+    try {
+      const ac = getAudio();
+      if (!ac) return;
+      def.play(ac, opts ?? {});
+    } catch { /* ignore */ }
   }
   setEnabled(v: boolean): void { this.enabled = v; }
 }
@@ -126,8 +128,8 @@ registerSfx({
   },
 });
 
-// Deprecated delegates: the old Player.ts/Powerup.ts/particles callers still import
-// these until Tasks 5-8 migrate them. Deleted in Task 8. They honor g.soundOn.
+// Deprecated delegates: the old Player.ts/Powerup.ts/Bullet.ts/particles callers
+// still import these until Tasks 5-8 migrate them. Deleted in Task 8. They honor g.soundOn.
 const deprecatedBus = new WebAudioBus();
 export function sfxShoot(weapon: number, g: { soundOn: boolean }): void {
   if (!g.soundOn) return;
