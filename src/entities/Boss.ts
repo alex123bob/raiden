@@ -84,7 +84,11 @@ export class Boss extends Entity {
     if (!patterns.length) return;
     const phasePatterns = patterns[ctx.bossPhase % patterns.length];
     const list = Array.isArray(phasePatterns) ? phasePatterns : [phasePatterns];
-    list.forEach(p => BULLET_PATTERNS.get(p.name)!.fire(this, ctx, p));
+    for (const p of list) {
+      const pat = BULLET_PATTERNS.get(p.name);
+      if (!pat) { console.error('unknown boss pattern: ' + p.name); continue; }
+      pat.fire(this, ctx, p);
+    }
   }
 }
 
