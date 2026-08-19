@@ -1,5 +1,6 @@
 import { W, H } from '../config.js';
 import { ctx } from '../canvas.js';
+import { enemyHpScale, extraBulletStreams, fireIntervalScale } from '../core/difficulty.js';
 
 // === ENEMIES ===
 
@@ -17,11 +18,13 @@ export const ENEMY_CFG = [
 ];
 
 // path: function(t) → {x, y}  (null for straight-down or stationary)
-export function mkEnemy(type, x, y, path) {
-  return Object.assign(
+export function mkEnemy(type, x, y, path, g) {
+  const e = Object.assign(
     { type, x, y, path, pathT: 0, alive: true, fireTimer: 1.2 + Math.random(), angle: 0 },
     ENEMY_CFG[type]
   );
+  if (g) e.hp = Math.ceil(e.hp * enemyHpScale(g.currentStage));
+  return e;
 }
 
 export function drawEnemy(e) {
@@ -120,6 +123,16 @@ export function fireEnemy(e, g) {
       }
       break;
   }
+
+  const extra = extraBulletStreams(g.currentStage);
+  if (extra && (e.type === 0 || e.type === 1)) {
+    for (let k = 1; k <= extra; k++) {
+      const side = k % 2 === 0 ? -1 : 1;
+      const off  = side * 0.4 * Math.ceil(k / 2);
+      const a = Math.atan2(dy, dx) + off;
+      mkEB(Math.cos(a) * spd, Math.sin(a) * spd, '#ff4444');
+    }
+  }
 }
 
 export function updateEnemies(dt, g) {
@@ -133,7 +146,7 @@ export function updateEnemies(dt, g) {
     }
 
     // Fire timer
-    const fireInterval = (e.type === 3 ? 1.6 : 2.2) / g.diffMult;
+    const fireInterval = (e.type === 3 ? 1.6 : 2.2) * fireIntervalScale(g.currentStage) / g.diffMult;
     e.fireTimer -= dt;
     if (e.fireTimer <= 0) {
       if (e.type === 3) {

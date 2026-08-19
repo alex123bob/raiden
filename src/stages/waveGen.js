@@ -64,11 +64,11 @@ export function updateWaves(dt, g) {
       g.boss = createBoss(g);
       g.bossSpawned = true;
     } else if (entry.type === 3) {
-      const e = mkEnemy(3, entry.x, entry.y, null);
+      const e = mkEnemy(3, entry.x, entry.y, null, g);
       if (entry.eliteHp) e.hp = Math.ceil(e.hp * 1.5);
       g.enemies.push(e);
     } else {
-      const e = mkEnemy(entry.type, 0, 0, entry.path);
+      const e = mkEnemy(entry.type, 0, 0, entry.path, g);
       if (entry.path) { const p0 = entry.path(0); e.x = p0.x; e.y = p0.y; }
       if (entry.eliteHp) e.hp = Math.ceil(e.hp * 1.5);
       g.enemies.push(e);

@@ -1,6 +1,7 @@
 import { W, H, STATE, STAGE_COUNT } from '../config.js';
 import { ctx } from '../canvas.js';
 import { spawnExplosion } from '../core/particles.js';
+import { bossHpForStage, phaseCountForStage } from '../core/difficulty.js';
 import { mkEnemy, ENEMY_CFG } from './Enemy.js';
 import { STAGES } from '../stages/stageData.js';
 
@@ -18,11 +19,11 @@ export function createBoss(g) {
     tint: def.tint || null,
     x: W/2, y: 130,
     r: def.r,
-    hp: def.hp,
+    hp: bossHpForStage(g.currentStage),
     targetX: W/2, targetY: 130,
     spd: def.speed || 58,
     fireTimer: 1.8,
-    phaseCount: def.phaseCount,
+    phaseCount: phaseCountForStage(g.currentStage),
     spawnMinions: def.spawnMinions || false,
     patterns: def.patterns,
     minionTimer: 3.0,
@@ -435,7 +436,7 @@ export function updateBoss(dt, g) {
 export function spawnMinion(g) {
   const b = g.boss;
   if (!b) return;
-  const e = mkEnemy(0, b.x + (Math.random()-0.5)*40, b.y + 20, null);
+  const e = mkEnemy(0, b.x + (Math.random()-0.5)*40, b.y + 20, null, g);
   e.spd = ENEMY_CFG[0].spd * g.diffMult * 1.2;
   g.enemies.push(e);
 }
