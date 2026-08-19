@@ -1,5 +1,15 @@
 import { W } from '../config.js';
 
+// Stage descriptor grammar (consumed by buildWaveTable in waveGen.js):
+//   waves entry forms:
+//     { t, type, path: ['down', sx, sy, spd] | ['sin', sx, sy, spd, amp, freq]
+//                        | ['form', cx, sy, spd, idx, total] }
+//       - spd is the RAW speed factor; waveGen multiplies by diffMult.
+//     { t, type: 3, x, y }            stationary turret
+//     { t, boss: N }                  boss trigger (N = stage number)
+//     elite: true  ->  runtime eliteHp (1.5x hp), used on stage 8 regulars
+//   enemy type: 0=small fighter, 1=gunship, 2=bomber, 3=turret
+//   bg.features vocabulary: rocks | clouds | bubbles | streaks | hulls | wisps | walls ([] = stars only)
 export const STAGES = [
   // Stage 1
   {
