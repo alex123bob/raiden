@@ -25,6 +25,11 @@ export interface EnemyType {
 }
 
 export class Enemy extends Entity {
+  hp: number;
+  spd: number;
+  score: number;
+  dropChance: number;
+  color: string;
   path: PathFn | null;
   pathT = 0;
   fireTimer: number;
