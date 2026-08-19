@@ -119,12 +119,16 @@ export interface GameContext {
   bossAngle: number;
   bossTimer: number;
   stageTimer: number;
+  stageClearTimer: number;
+  victoryTimer: number;
   score: number;
   audio: AudioBus;
   spawnParticles(kind: string, x: number, y: number, opts?: Record<string, unknown>): void;
   saveHS(): void;
   startStage(n: number): void;
 }
+
+> `stageClearTimer`/`victoryTimer` are read/written by `Boss.onBossDeath` (Task 10) and `Player.update`, so they are part of the entity-facing contract.
 ```
 
 > Note: `Entity.draw` takes both `rc` **and** `ctx` (the design sketch showed only `rc`). `Boss.draw` needs `ctx.bossAngle`/`bossTimer`/`bossMaxHp` for the HP bar and the boss render call, so the base signature carries both. This is the single deliberate deviation from the spec snippet; all families are substitutable under it (Liskov holds).
