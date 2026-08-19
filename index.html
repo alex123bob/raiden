@@ -119,14 +119,21 @@ const isTouch = ('ontouchstart' in window) ||
 
 // Control geometry, in game coordinates (480x640).
 const TC = {
-  dpad:  { x: 84,     y: H - 96, r: 62, dead: 12 },
   fire:  { x: W - 66, y: H - 86, r: 48 },
   bomb:  { x: W - 66, y: H - 176, r: 34 },
   pause: { x: W - 26, y: 52, r: 16 },
   gear:  { x: W - 68, y: 52, r: 16 },
 };
-const touchPts = {};        // identifier -> {x, y} in game coords
-let firePressed = false;    // glow flags for drawing
+// Analog movement stick: floating base appears where the thumb lands (left
+// side of the screen); the knob follows the thumb, and the ship moves in that
+// direction at a speed proportional to how far the knob is pushed (0..1).
+const STICK_R    = 56;                       // max knob travel from base
+const STICK_DEAD = 0.14;                     // deadzone (fraction of travel)
+const STICK_HOME = { x: 96, y: H - 108 };    // resting display position
+const stick = { id: null, bx: 0, by: 0, kx: 0, ky: 0 };
+const moveVec = { x: 0, y: 0 };              // -1..1 per axis, applied each frame
+const roles = {};                            // touch identifier -> 'fire' | 'bomb'
+let firePressed = false;                     // glow flags for drawing
 let bombPressed = false;
 
 function toCanvas(t) {
@@ -142,7 +149,7 @@ function within(p, c) {
 }
 
 // Discrete (one-per-press) actions for a freshly-started touch.
-// Returns true if the touch was consumed (should not drive movement).
+// Returns true if the touch was consumed (should not drive movement/fire).
 function touchDiscrete(p) {
   if (settingsOpen) {
     const bx = W/2 - 130, by = H/2 - 90, bw = 260, bh = 185;
@@ -167,27 +174,27 @@ function touchDiscrete(p) {
   return false;
 }
 
-// Rebuild the continuous (held) touch-owned keys from all active touch points.
-function applyTouchMovement() {
-  keys['ArrowLeft'] = keys['ArrowRight'] = keys['ArrowUp'] = keys['ArrowDown'] = false;
-  keys['Space'] = false;
-  firePressed = false;
-  let bombNow = false;
-  const d = TC.dpad, reach = d.r * 1.35;
-  for (const id in touchPts) {
-    const p = touchPts[id];
-    if (within(p, TC.fire)) { keys['Space'] = true; firePressed = true; continue; }
-    if (within(p, TC.bomb)) { bombNow = true; continue; }
-    const dx = p.x - d.x, dy = p.y - d.y;
-    if (dx * dx + dy * dy <= reach * reach) {
-      if (dx < -d.dead) keys['ArrowLeft']  = true;
-      if (dx >  d.dead) keys['ArrowRight'] = true;
-      if (dy < -d.dead) keys['ArrowUp']    = true;
-      if (dy >  d.dead) keys['ArrowDown']  = true;
-    }
+// Recompute the analog movement vector from the stick's base + knob positions.
+function recomputeMoveVec() {
+  if (stick.id === null) { moveVec.x = 0; moveVec.y = 0; return; }
+  let dx = stick.kx - stick.bx, dy = stick.ky - stick.by;
+  const len = Math.hypot(dx, dy);
+  if (len > STICK_R) { dx = dx / len * STICK_R; dy = dy / len * STICK_R; }
+  const mag = len / STICK_R;                 // 0..1
+  if (mag < STICK_DEAD) { moveVec.x = 0; moveVec.y = 0; return; }
+  moveVec.x = dx / STICK_R;
+  moveVec.y = dy / STICK_R;
+}
+
+// Recompute button glow flags from currently-held button touches.
+function recomputeButtons() {
+  firePressed = bombPressed = false;
+  for (const id in roles) {
+    if (roles[id] === 'fire') firePressed = true;
+    if (roles[id] === 'bomb') bombPressed = true;
   }
-  keys['KeyB'] = bombNow;   // _bombUsed latch in updatePlayer makes this one-shot
-  bombPressed = bombNow;
+  keys['Space'] = firePressed;               // FIRE held → Space (drives charge too)
+  keys['KeyB']  = bombPressed;               // _bombUsed latch makes bomb one-shot
 }
 
 if (isTouch) {
@@ -196,24 +203,38 @@ if (isTouch) {
     getAudio();  // unlock WebAudio on first user gesture
     for (const t of e.changedTouches) {
       const p = toCanvas(t);
-      if (touchDiscrete(p)) continue;   // consumed by a menu/button
-      touchPts[t.identifier] = p;
+      if (touchDiscrete(p)) continue;        // consumed by a menu/button
+      if (within(p, TC.fire)) { roles[t.identifier] = 'fire'; continue; }
+      if (within(p, TC.bomb)) { roles[t.identifier] = 'bomb'; continue; }
+      if (stick.id === null) {               // claim as the movement stick
+        stick.id = t.identifier;
+        stick.bx = p.x; stick.by = p.y;
+        stick.kx = p.x; stick.ky = p.y;
+      }
     }
-    applyTouchMovement();
+    recomputeButtons();
+    recomputeMoveVec();
   }, { passive: false });
 
   canvas.addEventListener('touchmove', e => {
     e.preventDefault();
     for (const t of e.changedTouches) {
-      if (touchPts[t.identifier]) touchPts[t.identifier] = toCanvas(t);
+      if (t.identifier === stick.id) {
+        const p = toCanvas(t);
+        stick.kx = p.x; stick.ky = p.y;
+      }
     }
-    applyTouchMovement();
+    recomputeMoveVec();
   }, { passive: false });
 
   const endTouch = e => {
     e.preventDefault();
-    for (const t of e.changedTouches) delete touchPts[t.identifier];
-    applyTouchMovement();
+    for (const t of e.changedTouches) {
+      if (t.identifier === stick.id) stick.id = null;
+      delete roles[t.identifier];
+    }
+    recomputeButtons();
+    recomputeMoveVec();
   };
   canvas.addEventListener('touchend', endTouch, { passive: false });
   canvas.addEventListener('touchcancel', endTouch, { passive: false });
@@ -238,22 +259,25 @@ function drawTouchControls() {
   const playing = (state === STATE.PLAYING || state === STATE.PAUSED);
 
   if (playing) {
-    // D-pad
-    const d = TC.dpad;
-    ctx.strokeStyle = 'rgba(120,180,255,0.5)';
-    ctx.fillStyle   = 'rgba(30,50,90,0.28)';
-    ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.font = '18px monospace';
-    const dirs = [
-      ['ArrowUp',    0,       -d.r*0.6, '▲'],
-      ['ArrowDown',  0,        d.r*0.6, '▼'],
-      ['ArrowLeft', -d.r*0.6,  0,       '◀'],
-      ['ArrowRight', d.r*0.6,  0,       '▶'],
-    ];
-    for (const [k, ox, oy, ch] of dirs) {
-      ctx.fillStyle = keys[k] ? '#ffff66' : 'rgba(160,200,255,0.8)';
-      ctx.fillText(ch, d.x + ox, d.y + oy);
+    // Analog movement stick — floating base + knob (or resting home ring)
+    const active = stick.id !== null;
+    const baseX = active ? stick.bx : STICK_HOME.x;
+    const baseY = active ? stick.by : STICK_HOME.y;
+    let knobX = baseX, knobY = baseY;
+    if (active) {
+      let dx = stick.kx - stick.bx, dy = stick.ky - stick.by;
+      const len = Math.hypot(dx, dy);
+      if (len > STICK_R) { dx = dx / len * STICK_R; dy = dy / len * STICK_R; }
+      knobX = baseX + dx; knobY = baseY + dy;
     }
+    // base ring
+    ctx.strokeStyle = active ? 'rgba(120,180,255,0.7)' : 'rgba(120,180,255,0.35)';
+    ctx.fillStyle   = 'rgba(30,50,90,0.22)';
+    ctx.beginPath(); ctx.arc(baseX, baseY, STICK_R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // knob
+    ctx.fillStyle   = active ? 'rgba(160,210,255,0.85)' : 'rgba(160,200,255,0.5)';
+    ctx.strokeStyle = 'rgba(200,230,255,0.9)';
+    ctx.beginPath(); ctx.arc(knobX, knobY, 22, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
     // Fire
     const f = TC.fire;
@@ -868,10 +892,14 @@ function updatePlayer(dt) {
   if (p.invTimer > 0) p.invTimer -= dt;
 
   const spd = p.speed * dt;
+  // Keyboard (desktop): discrete arrows
   if (keys['ArrowLeft'])  p.x -= spd;
   if (keys['ArrowRight']) p.x += spd;
   if (keys['ArrowUp'])    p.y -= spd;
   if (keys['ArrowDown'])  p.y += spd;
+  // Analog stick (touch): proportional vector
+  p.x += moveVec.x * spd;
+  p.y += moveVec.y * spd;
   p.x = Math.max(p.r, Math.min(W - p.r, p.x));
   p.y = Math.max(p.r, Math.min(H - p.r, p.y));
   // [ARCADE] Fire rate controlled by weapon stat, not OS key-repeat (keydown/keyup map)
@@ -2496,7 +2524,7 @@ function drawTitle() {
   ctx.font = '11px monospace';
   if (isTouch) {
     ctx.fillText('TAP TO START', W/2, 460);
-    ctx.fillText('D-pad move   FIRE   ★ bomb   ⚙ settings', W/2, 478);
+    ctx.fillText('L-stick move   FIRE   ★ bomb   ⚙ settings', W/2, 478);
   } else {
     ctx.fillText('ARROWS move   SPACE fire   B bomb', W/2, 460);
     ctx.fillText('P pause   S settings', W/2, 478);
