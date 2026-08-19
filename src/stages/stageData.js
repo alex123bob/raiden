@@ -34,7 +34,13 @@ export const STAGES = [
       ...[0,1,2,3,4,5,6,7].map(i => ({ t: 26 + i*0.18, type: 0, path: ['form', W/2, -20, 136.5, i, 8] })),
       { t: 30, boss: 1 },
     ],
-    boss: { archetype: 1, tint: null, r: 50, hp: 800, speed: 58, phaseCount: 3, spawnMinions: false },
+    boss: { archetype: 1, tint: null, r: 50, hp: 800, speed: 58, phaseCount: 3, spawnMinions: false,
+      patterns: [
+        { name: 'aimSpread', spdBase: 175, spdPhase: 35, count: 7, gap: 0.14, clr: '#ff2200' },
+        { name: 'aimBurst',  spdBase: 175, spdPhase: 35, offsets: [-0.08, 0.08], clr: '#ff8800' },
+        { name: 'ring',      spdBase: 175, spdPhase: 35, count: 8, spdF: 0.7, clr: '#cc00ff' },
+      ],
+    },
   },
 
   // Stage 2
@@ -60,7 +66,13 @@ export const STAGES = [
       ...[0,1,2,3,4,5,6,7].map(i => ({ t: 26 + i*0.18, type: 0, path: ['form', W/2, -20, 188.5, i, 8] })),
       { t: 30, boss: 2 },
     ],
-    boss: { archetype: 2, tint: null, r: 60, hp: 1000, speed: 58, phaseCount: 3, spawnMinions: false },
+    boss: { archetype: 2, tint: null, r: 60, hp: 1000, speed: 58, phaseCount: 3, spawnMinions: false,
+      patterns: [
+        { name: 'ring', spdBase: 120, spdPhase: 20, count: 8,  clr: '#4466ff' },
+        { name: 'ring', spdBase: 120, spdPhase: 20, count: 12, clr: '#4466ff' },
+        { name: 'ring', spdBase: 120, spdPhase: 20, count: 16, clr: '#4466ff' },
+      ],
+    },
   },
 
   // Stage 3
@@ -83,7 +95,13 @@ export const STAGES = [
       ...[0,1,2,3,4,5,6,7].map(i => ({ t: 17 + i*0.15, type: 0, path: ['form', W/2, -20, 192, i, 8] })),
       { t: 25, boss: 3 },
     ],
-    boss: { archetype: 3, tint: null, r: 50, hp: 1100, speed: 58, phaseCount: 3, spawnMinions: false },
+    boss: { archetype: 3, tint: null, r: 50, hp: 1100, speed: 58, phaseCount: 3, spawnMinions: false,
+      patterns: [
+        { name: 'sideAlternate', spdBase: 165, spdPhase: 30 },
+        { name: 'sideAlternate', spdBase: 165, spdPhase: 30 },
+        { name: 'sideAlternate', spdBase: 165, spdPhase: 30 },
+      ],
+    },
   },
 
   // Stage 4
@@ -112,7 +130,16 @@ export const STAGES = [
       ...[0,1,2,3,4,5,6].map(i => ({ t: 23 + i*0.18, type: 0, path: ['form', W/2, -20, 156, i, 7] })),
       { t: 28, boss: 4 },
     ],
-    boss: { archetype: 4, tint: null, r: 55, hp: 1200, speed: 58, phaseCount: 3, spawnMinions: false },
+    boss: { archetype: 4, tint: null, r: 55, hp: 1200, speed: 58, phaseCount: 3, spawnMinions: false,
+      patterns: [
+        [{ name: 'aimBurst', spdBase: 140, spdPhase: 25, offsets: [-0.22, 0, 0.22], clr: '#88cc00' },
+         { name: 'jitter',   spdBase: 140, spdPhase: 25, clr: '#44ee44' }],
+        [{ name: 'aimBurst', spdBase: 140, spdPhase: 25, offsets: [-0.22, 0, 0.22], clr: '#88cc00' },
+         { name: 'jitter',   spdBase: 140, spdPhase: 25, clr: '#44ee44' }],
+        [{ name: 'aimBurst', spdBase: 140, spdPhase: 25, offsets: [-0.22, 0, 0.22], clr: '#88cc00' },
+         { name: 'jitter',   spdBase: 140, spdPhase: 25, clr: '#44ee44' }],
+      ],
+    },
   },
 
   // Stage 5
@@ -137,7 +164,13 @@ export const STAGES = [
       ...[0,1,2,3,4,5,6,7].map(i => ({ t: 21 + i*0.12, type: 0, path: ['form', W/2, -20, 227.5, i, 8] })),
       { t: 26, boss: 5 },
     ],
-    boss: { archetype: 5, tint: null, r: 52, hp: 1300, speed: 58, phaseCount: 3, spawnMinions: false },
+    boss: { archetype: 5, tint: null, r: 52, hp: 1300, speed: 58, phaseCount: 3, spawnMinions: false,
+      patterns: [
+        { name: 'laserSweep', spdBase: 155, spdPhase: 30, count: 5, halfSpan: 0.40, spdF: 0.85, clr: '#ffaa00' },
+        { name: 'laserSweep', spdBase: 155, spdPhase: 30, count: 7, halfSpan: 0.40, spdF: 0.85, clr: '#ffaa00' },
+        { name: 'laserSweep', spdBase: 155, spdPhase: 30, count: 9, halfSpan: 0.40, spdF: 0.85, clr: '#ffaa00' },
+      ],
+    },
   },
 
   // Stage 6
@@ -160,7 +193,14 @@ export const STAGES = [
       ...[0,1,2,3].map(i => ({ t: 22 + i*0.5, type: 1, path: ['form', W/2, -30, 108, i, 4] })),
       { t: 28, boss: 6 },
     ],
-    boss: { archetype: 6, tint: null, r: 65, hp: 1500, speed: 58, phaseCount: 4, spawnMinions: true },
+    boss: { archetype: 6, tint: null, r: 65, hp: 1500, speed: 58, phaseCount: 4, spawnMinions: true,
+      patterns: [
+        { name: 'aimSpread', spdBase: 160, spdPhase: 28, count: 5, gap: 0.175, clr: '#00ccff' },
+        { name: 'aimSpread', spdBase: 160, spdPhase: 28, count: 6, gap: 0.14,  clr: '#00ccff' },
+        { name: 'aimSpread', spdBase: 160, spdPhase: 28, count: 7, gap: 0.1167, clr: '#00ccff' },
+        { name: 'aimSpread', spdBase: 160, spdPhase: 28, count: 8, gap: 0.1,   clr: '#00ccff' },
+      ],
+    },
   },
 
   // Stage 7
@@ -193,7 +233,18 @@ export const STAGES = [
       ...[0,1,2].map(i => ({ t: 23 + i*0.5, type: 1, path: ['down', 80 + i*160, -30, 132] })),
       { t: 30, boss: 7 },
     ],
-    boss: { archetype: 7, tint: null, r: 50, hp: 1400, speed: 58, phaseCount: 4, spawnMinions: false },
+    boss: { archetype: 7, tint: null, r: 50, hp: 1400, speed: 58, phaseCount: 4, spawnMinions: false,
+      patterns: [
+        [{ name: 'aimBurst', spdBase: 200, spdPhase: 35, offsets: [-0.06, 0.06], clr: '#aa44ff' },
+         { name: 'scatter',  spdBase: 200, spdPhase: 35, count: 2, spdF: 0.7, clr: '#cc88ff' }],
+        [{ name: 'aimBurst', spdBase: 200, spdPhase: 35, offsets: [-0.06, 0.06], clr: '#aa44ff' },
+         { name: 'scatter',  spdBase: 200, spdPhase: 35, count: 3, spdF: 0.7, clr: '#cc88ff' }],
+        [{ name: 'aimBurst', spdBase: 200, spdPhase: 35, offsets: [-0.06, 0.06], clr: '#aa44ff' },
+         { name: 'scatter',  spdBase: 200, spdPhase: 35, count: 4, spdF: 0.7, clr: '#cc88ff' }],
+        [{ name: 'aimBurst', spdBase: 200, spdPhase: 35, offsets: [-0.06, 0.06], clr: '#aa44ff' },
+         { name: 'scatter',  spdBase: 200, spdPhase: 35, count: 5, spdF: 0.7, clr: '#cc88ff' }],
+      ],
+    },
   },
 
   // Stage 8
@@ -226,6 +277,21 @@ export const STAGES = [
       ...[0,1,2,3].map(i => ({ t: 26 + i*0.4, type: 1, path: ['form', W/2, -30, 138, i, 4], elite: true })),
       { t: 32, boss: 8 },
     ],
-    boss: { archetype: 8, tint: null, r: 75, hp: 2000, speed: 58, phaseCount: 5, spawnMinions: true },
+    boss: { archetype: 8, tint: null, r: 75, hp: 2000, speed: 58, phaseCount: 5, spawnMinions: true,
+      patterns: [
+        { name: 'ring', spdBase: 175, spdPhase: 28, count: 8,  spdF: 0.65, clr: '#ff2200' },
+        [{ name: 'ring',     spdBase: 175, spdPhase: 28, count: 10, spdF: 0.65, clr: '#ff2200' },
+         { name: 'aimBurst', spdBase: 175, spdPhase: 28, offsets: [-0.10, 0, 0.10], clr: '#ff8800' }],
+        [{ name: 'ring',     spdBase: 175, spdPhase: 28, count: 12, spdF: 0.65, clr: '#ff2200' },
+         { name: 'aimBurst', spdBase: 175, spdPhase: 28, offsets: [-0.10, 0, 0.10], clr: '#ff8800' },
+         { name: 'scatter',  spdBase: 175, spdPhase: 28, count: 4, spdF: 0.75, clr: '#ffaa00' }],
+        [{ name: 'ring',     spdBase: 175, spdPhase: 28, count: 14, spdF: 0.65, clr: '#ff2200' },
+         { name: 'aimBurst', spdBase: 175, spdPhase: 28, offsets: [-0.10, 0, 0.10], clr: '#ff8800' },
+         { name: 'scatter',  spdBase: 175, spdPhase: 28, count: 4, spdF: 0.75, clr: '#ffaa00' }],
+        [{ name: 'ring',     spdBase: 175, spdPhase: 28, count: 16, spdF: 0.65, clr: '#ff2200' },
+         { name: 'aimBurst', spdBase: 175, spdPhase: 28, offsets: [-0.10, 0, 0.10], clr: '#ff8800' },
+         { name: 'scatter',  spdBase: 175, spdPhase: 28, count: 4, spdF: 0.75, clr: '#ffaa00' }],
+      ],
+    },
   },
 ];

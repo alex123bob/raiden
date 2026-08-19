@@ -2,6 +2,7 @@ import { W, H, STATE, STAGE_COUNT } from '../config.js';
 import { ctx } from '../canvas.js';
 import { spawnExplosion } from '../core/particles.js';
 import { mkEnemy, ENEMY_CFG } from './Enemy.js';
+import { STAGES } from '../stages/stageData.js';
 
 // === BOSS ===
 
@@ -13,33 +14,26 @@ import { mkEnemy, ENEMY_CFG } from './Enemy.js';
 let boss = null, bossAngle = 0, bossTimer = 0, bossPhase = 0, bossMaxHp = 0;
 let player = null, enemyBullets = null, diffMult = 1.0;
 
-export function createBoss(stageNum, g) {
-  const stats = [
-    { r: 50, hp:  800, phaseCount: 3, spawnMinions: false },
-    { r: 60, hp: 1000, phaseCount: 3, spawnMinions: false },
-    { r: 50, hp: 1100, phaseCount: 3, spawnMinions: false },
-    { r: 55, hp: 1200, phaseCount: 3, spawnMinions: false },
-    { r: 52, hp: 1300, phaseCount: 3, spawnMinions: false },
-    { r: 65, hp: 1500, phaseCount: 4, spawnMinions: true  },
-    { r: 50, hp: 1400, phaseCount: 4, spawnMinions: false },
-    { r: 75, hp: 2000, phaseCount: 5, spawnMinions: true  },
-  ];
-  const s = stats[stageNum - 1];
-  g.bossMaxHp = s.hp;
+export function createBoss(g) {
+  const def = STAGES[g.currentStage - 1].boss;
+  g.bossMaxHp = def.hp;
   g.bossPhase = 0;
   g.bossTimer = 0;
   g.bossAngle = 0;
   return {
-    stageNum,
+    stageNum: g.currentStage,
+    archetype: def.archetype,
+    tint: def.tint || null,
     x: W/2, y: 130,
-    r: s.r,
-    hp: s.hp,
+    r: def.r,
+    hp: def.hp,
     targetX: W/2, targetY: 130,
-    spd: 58,
+    spd: def.speed || 58,
     fireTimer: 1.8,
-    phaseCount:   s.phaseCount,
-    spawnMinions: s.spawnMinions,
-    minionTimer:  3.0,
+    phaseCount: def.phaseCount,
+    spawnMinions: def.spawnMinions || false,
+    patterns: def.patterns,
+    minionTimer: 3.0,
     phantomAlpha: 1.0,
   };
 }
@@ -306,151 +300,78 @@ function drawBoss8() {
   ctx.restore();
 }
 
-export function fireBoss(g) {
-  if (!g.player || g.player.dead || !g.boss) return;
-  boss = g.boss; bossPhase = g.bossPhase; bossAngle = g.bossAngle; bossTimer = g.bossTimer;
-  player = g.player; enemyBullets = g.enemyBullets; diffMult = g.diffMult;
-  switch (g.boss.stageNum) {
-    case 1: fireBoss1(); break;
-    case 2: fireBoss2(); break;
-    case 3: fireBoss3(); break;
-    case 4: fireBoss4(); break;
-    case 5: fireBoss5(); break;
-    case 6: fireBoss6(); break;
-    case 7: fireBoss7(); break;
-    case 8: fireBoss8(); break;
-  }
+function mkEB(b, g, vx, vy, clr, r = 5, ox = 0) {
+  g.enemyBullets.push({ x: b.x + ox, y: b.y, vx, vy, r, clr });
 }
 
-function fireBoss1() {
-  const dx = player.x - boss.x, dy = player.y - boss.y;
-  const d = Math.sqrt(dx*dx + dy*dy) || 1;
-  const spd = (175 + bossPhase * 35) * diffMult;
-  const mkEB = (vx, vy, clr) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: 5, clr });
-  switch (bossPhase) {
-    case 0:
-      for (let i = -3; i <= 3; i++) {
-        const ang = Math.atan2(dy, dx) + i * 0.14;
-        mkEB(Math.cos(ang)*spd, Math.sin(ang)*spd, '#ff2200');
+export function firePattern(name, b, g, opts) {
+  const dx = g.player.x - b.x, dy = g.player.y - b.y;
+  const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+  const spd = (opts.spdBase + g.bossPhase * opts.spdPhase) * g.diffMult;
+  switch (name) {
+    case 'aimSpread': {
+      const { count, gap, clr } = opts;
+      for (let i = -(count - 1) / 2; i <= (count - 1) / 2; i++) {
+        const a = Math.atan2(dy, dx) + i * gap;
+        mkEB(b, g, Math.cos(a) * spd, Math.sin(a) * spd, clr);
       }
       break;
-    case 1:
-      [-0.08, 0.08].forEach(a => {
-        const ang = Math.atan2(dy, dx) + a;
-        mkEB(Math.cos(ang)*spd, Math.sin(ang)*spd, '#ff8800');
+    }
+    case 'ring': {
+      const { count, clr, spdF = 1 } = opts;
+      for (let i = 0; i < count; i++) {
+        const a = g.bossAngle + (i / count) * Math.PI * 2;
+        mkEB(b, g, Math.cos(a) * spd * spdF, Math.sin(a) * spd * spdF, clr);
+      }
+      break;
+    }
+    case 'aimBurst': {
+      opts.offsets.forEach(off => {
+        const a = Math.atan2(dy, dx) + off;
+        mkEB(b, g, Math.cos(a) * spd, Math.sin(a) * spd, opts.clr);
       });
       break;
-    case 2:
-      for (let i = 0; i < 8; i++) {
-        const ang = bossAngle + i * Math.PI*2/8;
-        mkEB(Math.cos(ang)*spd*0.7, Math.sin(ang)*spd*0.7, '#cc00ff');
+    }
+    case 'sideAlternate': {
+      const side = Math.floor(g.bossTimer * 2) % 2 === 0 ? -1 : 1;
+      const ox = side * (b.r + 14);
+      const baseA = Math.atan2(dy, dx);
+      for (let j = 0; j < 3; j++) {
+        const a = baseA + (j - 1) * 0.08;
+        mkEB(b, g, Math.cos(a) * spd, Math.sin(a) * spd, '#ff8800', 5, ox);
       }
       break;
-  }
-}
-
-function fireBoss2() {
-  const spd = (120 + bossPhase * 20) * diffMult;
-  const count = [8, 12, 16][Math.min(bossPhase, 2)];
-  const mkEB = (vx, vy, clr) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: 5, clr });
-  for (let i = 0; i < count; i++) {
-    const ang = bossAngle + (i / count) * Math.PI * 2;
-    mkEB(Math.cos(ang)*spd, Math.sin(ang)*spd, '#4466ff');
-  }
-}
-
-function fireBoss3() {
-  const dx = player.x - boss.x, dy = player.y - boss.y;
-  const d = Math.sqrt(dx*dx + dy*dy) || 1;
-  const spd = (165 + bossPhase * 30) * diffMult;
-  const mkEB = (ox, vx, vy, clr) => enemyBullets.push({ x: boss.x + ox, y: boss.y, vx, vy, r: 5, clr });
-  const side = Math.floor(bossTimer * 2) % 2 === 0 ? -1 : 1;
-  const ox = side * (boss.r + 14);
-  const baseA = Math.atan2(dy, dx);
-  for (let j = 0; j < 3; j++) {
-    const a = baseA + (j - 1) * 0.08;
-    mkEB(ox, Math.cos(a)*spd, Math.sin(a)*spd, '#ff8800');
-  }
-}
-
-function fireBoss4() {
-  const dx = player.x - boss.x, dy = player.y - boss.y;
-  const d = Math.sqrt(dx*dx + dy*dy) || 1;
-  const spd = (140 + bossPhase * 25) * diffMult;
-  const mkEB = (vx, vy, clr, r) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: r||5, clr });
-  mkEB((Math.random()-0.5)*20, 12, '#44ee44', 7);
-  const baseA = Math.atan2(dy, dx);
-  for (let j = -1; j <= 1; j++) {
-    const a = baseA + j * 0.22;
-    mkEB(Math.cos(a)*spd, Math.sin(a)*spd, '#88cc00');
-  }
-}
-
-function fireBoss5() {
-  const dx = player.x - boss.x, dy = player.y - boss.y;
-  const d = Math.sqrt(dx*dx + dy*dy) || 1;
-  const spd = (155 + bossPhase * 30) * diffMult;
-  const mkEB = (vx, vy, clr) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: 5, clr });
-  const arcCount = 5 + bossPhase * 2;
-  const halfSpan = 0.40;
-  for (let i = 0; i < arcCount; i++) {
-    const a = bossAngle + (-halfSpan + (i / (arcCount-1)) * halfSpan * 2);
-    mkEB(Math.cos(a)*spd*0.85, Math.sin(a)*spd*0.85, '#ffaa00');
-  }
-  mkEB(dx/d*spd, dy/d*spd, '#ffff44');
-}
-
-function fireBoss6() {
-  const dx = player.x - boss.x, dy = player.y - boss.y;
-  const d = Math.sqrt(dx*dx + dy*dy) || 1;
-  const spd = (160 + bossPhase * 28) * diffMult;
-  const mkEB = (vx, vy, clr) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: 5, clr });
-  const spreadCount = 5 + bossPhase;
-  const baseA = Math.atan2(dy, dx);
-  for (let i = 0; i < spreadCount; i++) {
-    const a = baseA + (-0.35 + (i / (spreadCount-1)) * 0.70);
-    mkEB(Math.cos(a)*spd, Math.sin(a)*spd, '#00ccff');
-  }
-}
-
-function fireBoss7() {
-  const dx = player.x - boss.x, dy = player.y - boss.y;
-  const d = Math.sqrt(dx*dx + dy*dy) || 1;
-  const spd = (200 + bossPhase * 35) * diffMult;
-  const mkEB = (vx, vy, clr) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: 5, clr });
-  [-0.06, 0.06].forEach(a => {
-    const ang = Math.atan2(dy, dx) + a;
-    mkEB(Math.cos(ang)*spd, Math.sin(ang)*spd, '#aa44ff');
-  });
-  const scatterCount = 2 + bossPhase;
-  for (let i = 0; i < scatterCount; i++) {
-    const a = Math.random() * Math.PI * 2;
-    mkEB(Math.cos(a)*spd*0.7, Math.sin(a)*spd*0.7, '#cc88ff');
-  }
-}
-
-function fireBoss8() {
-  const dx = player.x - boss.x, dy = player.y - boss.y;
-  const d = Math.sqrt(dx*dx + dy*dy) || 1;
-  const spd = (175 + bossPhase * 28) * diffMult;
-  const mkEB = (vx, vy, clr, r) => enemyBullets.push({ x: boss.x, y: boss.y, vx, vy, r: r||5, clr });
-  const ringCount = 8 + bossPhase * 2;
-  for (let i = 0; i < ringCount; i++) {
-    const a = bossAngle + (i / ringCount) * Math.PI * 2;
-    mkEB(Math.cos(a)*spd*0.65, Math.sin(a)*spd*0.65, '#ff2200');
-  }
-  if (bossPhase >= 1) {
-    const baseA = Math.atan2(dy, dx);
-    [-0.10, 0, 0.10].forEach(off => {
-      mkEB(Math.cos(baseA+off)*spd, Math.sin(baseA+off)*spd, '#ff8800');
-    });
-  }
-  if (bossPhase >= 2) {
-    for (let i = 0; i < 4; i++) {
-      const a = Math.random() * Math.PI * 2;
-      mkEB(Math.cos(a)*spd*0.75, Math.sin(a)*spd*0.75, '#ffaa00');
+    }
+    case 'laserSweep': {
+      const { count, halfSpan, clr, spdF = 1 } = opts;
+      for (let i = 0; i < count; i++) {
+        const a = g.bossAngle + (-halfSpan + (i / (count - 1)) * halfSpan * 2);
+        mkEB(b, g, Math.cos(a) * spd * spdF, Math.sin(a) * spd * spdF, clr);
+      }
+      mkEB(b, g, dx / d * spd, dy / d * spd, '#ffff44');
+      break;
+    }
+    case 'scatter': {
+      const { count, clr, spdF = 1 } = opts;
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        mkEB(b, g, Math.cos(a) * spd * spdF, Math.sin(a) * spd * spdF, clr);
+      }
+      break;
+    }
+    case 'jitter': {
+      mkEB(b, g, (Math.random() - 0.5) * 20, 12, opts.clr, 7);
+      break;
     }
   }
+}
+
+export function fireBoss(g) {
+  const b = g.boss;
+  if (!g.player || g.player.dead || !b) return;
+  const phasePatterns = b.patterns[g.bossPhase % b.patterns.length];
+  const list = Array.isArray(phasePatterns) ? phasePatterns : [phasePatterns];
+  list.forEach(p => firePattern(p.name, b, g, p));
 }
 
 export function updateBoss(dt, g) {
@@ -474,7 +395,7 @@ export function updateBoss(dt, g) {
   g.bossPhase = g.boss.phaseCount - 1 - Math.floor(hpPct * g.boss.phaseCount);
   g.bossPhase = Math.max(0, Math.min(g.boss.phaseCount - 1, g.bossPhase));
 
-  if (g.boss.stageNum === 7) {
+  if (g.boss.archetype === 7) {
     g.boss.phantomAlpha = 0.65 + Math.sin(g.bossTimer * 1.5) * 0.35;
   }
 

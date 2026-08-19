@@ -61,7 +61,7 @@ export function updateWaves(dt, g) {
       // Force-clear any remaining enemies (turrets may never scroll off)
       g.enemies.length = 0;
       g.enemyBullets.length = 0;
-      g.boss = createBoss(entry.boss, g);
+      g.boss = createBoss(g);
       g.bossSpawned = true;
     } else if (entry.type === 3) {
       const e = mkEnemy(3, entry.x, entry.y, null);
