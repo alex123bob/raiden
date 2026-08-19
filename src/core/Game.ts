@@ -8,7 +8,6 @@ import { updatePlayerBullets, drawPlayerBullets,
          updateEnemyBullets, drawEnemyBullets } from '../entities/Bullet.js';
 import { updateEnemies } from '../entities/Enemy.js';
 import { updatePowerups, drawPowerups } from '../entities/Powerup.js';
-import { drawBoss, updateBoss } from '../entities/Boss.js';
 import { runCollision } from './collision.js';
 import { STAGES } from '../stages/stageData.js';
 import { buildWaveTable, updateWaves } from '../stages/waveGen.js';
@@ -122,7 +121,7 @@ export class Game {
       updateEnemyBullets(dt, this);
       runCollision(this);
       updatePowerups(dt, this);
-      updateBoss(dt, this);
+      this.boss?.update(dt, this);
       updateWaves(dt, this);
     }
 
@@ -143,7 +142,7 @@ export class Game {
     else if (this.state === STATE.VICTORY)  drawVictory(this);
     else {
       this.enemies.forEach(e => e.draw(this.renderer, this));
-      drawBoss(this);
+      this.boss?.draw(this.renderer, this);
       drawEnemyBullets(this.renderer, this);
       drawPowerups(this.renderer, this);
       drawPlayerBullets(this.renderer, this);

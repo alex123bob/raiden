@@ -4,7 +4,6 @@ import type { RenderContext } from '../core/Renderer.js';
 import { Entity } from '../core/Entity.js';
 import { enemyHpScale, fireIntervalScale, extraBulletStreams } from '../core/difficulty.js';
 import { spawnEnemyBullet } from './Bullet.js';
-import { ENEMY_TYPES } from '../registries/enemies/index.js';
 
 export type PathFn = (t: number) => { x: number; y: number };
 
@@ -87,11 +86,3 @@ export function updateEnemies(dt: number, ctx: GameContext): void {
   }
 }
 
-// Temporary alias used by the still-unmigrated Boss.spawnMinion; deleted in Task 10.
-export function mkEnemy(type: string, x: number, y: number, path: PathFn | null,
-                        ctx?: Pick<GameContext, 'currentStage'>): Enemy {
-  return new Enemy(ENEMY_TYPES.get(type)!, x, y, path, ctx);
-}
-
-// Compatibility for the pre-migration Boss.spawnMinion; deleted in Task 10.
-export const ENEMY_CFG: { spd: number }[] = [{ spd: ENEMY_TYPES.get('fighter')!.spd }];

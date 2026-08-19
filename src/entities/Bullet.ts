@@ -220,24 +220,11 @@ export function updatePlayerBullets(dt: number, ctx: GameContext): void {
   }
 }
 
-// NOTE: kept as inline loops (old behavior) because the old Boss.ts firePattern
-// and Enemy.ts fireEnemy still push plain-object enemy bullets until Tasks 9-10.
-// Task 10 switches these to the instance-based `b.update`/`b.draw` form once every
-// enemy bullet is a Bullet instance. The inline logic is identical to the enemy
-// branch of Bullet.update / the 'enemy' kind render, so behavior is unchanged.
 export function updateEnemyBullets(dt: number, ctx: GameContext): void {
   for (let i = ctx.enemyBullets.length - 1; i >= 0; i--) {
     const b = ctx.enemyBullets[i];
-    if (b.delay) {
-      b.delay -= dt;
-      if (b.delay <= 0) b.delay = 0;
-      else continue;
-    }
-    b.x += b.vx * dt;
-    b.y += b.vy * dt;
-    if (b.y > H + 20 || b.y < -20 || b.x < -20 || b.x > W + 20) {
-      ctx.enemyBullets.splice(i, 1);
-    }
+    b.update(dt, ctx);
+    if (!b.alive) ctx.enemyBullets.splice(i, 1);
   }
 }
 
@@ -246,12 +233,7 @@ export function drawPlayerBullets(rc: RenderContext, ctx: GameContext): void {
 }
 
 export function drawEnemyBullets(rc: RenderContext, ctx: GameContext): void {
-  ctx.enemyBullets.forEach(b => {
-    rc.fillStyle = b.clr;
-    rc.beginPath(); rc.arc(b.x, b.y, b.r, 0, Math.PI * 2); rc.fill();
-    rc.fillStyle = 'rgba(255,255,255,0.5)';
-    rc.beginPath(); rc.arc(b.x, b.y, b.r * 0.45, 0, Math.PI * 2); rc.fill();
-  });
+  ctx.enemyBullets.forEach(b => b.draw(rc, ctx));
 }
 
 export const WEAPON_NAMES = ['VULCAN', 'SPREAD', 'MISSILE'];

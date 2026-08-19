@@ -36,16 +36,6 @@ export function spawnParticleKind(kind: string, x: number, y: number,
   def.spawn(ctx, x, y, opts);
 }
 
-// Backward-compat wrappers used by the still-unmigrated Player.ts, Boss.ts and
-// collision.ts callers (signature matches the old particles.ts exactly).
-// Deleted in Task 10 once every caller uses ctx.spawnParticles.
-export function spawnExplosion(x: number, y: number, size: number, color: string, ctx: GameContext): void {
-  spawnParticleKind('explosion', x, y, { size, color }, ctx);
-}
-export function spawnBombFlash(ctx: GameContext): void {
-  spawnParticleKind('bombFlash', 0, 0, {}, ctx);
-}
-
 export function updateParticles(dt: number, ctx: GameContext): void {
   for (let i = ctx.particles.length - 1; i >= 0; i--) {
     const p = ctx.particles[i];
