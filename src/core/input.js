@@ -5,7 +5,7 @@ import { getAudio } from './audio.js';
 // === INPUT ===
 
 export const isTouch = ('ontouchstart' in window) ||
-                       (window.matchMedia && matchMedia('(pointer: coarse)').matches);
+                       (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
 function handleKeyPress(g, code) {
   if (g.settingsOpen) {
