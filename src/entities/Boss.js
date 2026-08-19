@@ -7,12 +7,11 @@ import { STAGES } from '../stages/stageData.js';
 // === BOSS ===
 
 // TEMPORARY (Phase A scaffolding; Task 24 removes these aliases and
-// parameterizes drawBossN/fireBossN with explicit (ctx, boss, angle, timer)):
-// Module-level aliases mirroring the shared boss state. Entry points copy
-// g.* into the aliases before dispatching so the drawBossN/fireBossN bodies
-// below stay byte-identical to the source (they reference the bare names).
-let boss = null, bossAngle = 0, bossTimer = 0, bossPhase = 0, bossMaxHp = 0;
-let player = null, enemyBullets = null, diffMult = 1.0;
+// parameterizes drawBossN with explicit (ctx, boss, angle, timer)):
+// Module-level aliases mirroring the shared boss draw state. drawBoss copies
+// g.* into the aliases before dispatching so the drawBossN bodies below stay
+// byte-identical to the source (they reference the bare names).
+let boss = null, bossAngle = 0, bossTimer = 0;
 
 export function createBoss(g) {
   const def = STAGES[g.currentStage - 1].boss;
@@ -338,7 +337,7 @@ export function firePattern(name, b, g, opts) {
       const baseA = Math.atan2(dy, dx);
       for (let j = 0; j < 3; j++) {
         const a = baseA + (j - 1) * 0.08;
-        mkEB(b, g, Math.cos(a) * spd, Math.sin(a) * spd, '#ff8800', 5, ox);
+        mkEB(b, g, Math.cos(a) * spd, Math.sin(a) * spd, opts.clr || '#ff8800', 5, ox);
       }
       break;
     }
@@ -369,6 +368,7 @@ export function firePattern(name, b, g, opts) {
 export function fireBoss(g) {
   const b = g.boss;
   if (!g.player || g.player.dead || !b) return;
+  if (!b.patterns?.length) return;
   const phasePatterns = b.patterns[g.bossPhase % b.patterns.length];
   const list = Array.isArray(phasePatterns) ? phasePatterns : [phasePatterns];
   list.forEach(p => firePattern(p.name, b, g, p));
@@ -376,8 +376,6 @@ export function fireBoss(g) {
 
 export function updateBoss(dt, g) {
   if (!g.boss) return;
-  player = g.player; enemyBullets = g.enemyBullets; diffMult = g.diffMult;
-  boss = g.boss;
   g.bossTimer += dt;
   g.bossAngle += dt * 0.85;
 
