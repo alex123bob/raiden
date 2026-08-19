@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { STAGES } from '../src/stages/stageData.js';
-import { fireBoss, drawBoss } from '../src/entities/Boss.js';
+import { createBoss, fireBoss, drawBoss } from '../src/entities/Boss.js';
+import { bossHpForStage, phaseCountForStage } from '../src/core/difficulty.js';
 
 // pattern-name -> required option keys
 const REQUIRED = {
@@ -20,7 +21,7 @@ describe('boss pattern data', () => {
   it('every stage has a boss with patterns covering all phases', () => {
     for (let s = 1; s <= STAGES.length; s++) {
       const boss = STAGES[s - 1].boss;
-      expect(boss.patterns.length).toBeGreaterThanOrEqual(boss.phaseCount);
+      expect(boss.patterns.length).toBeGreaterThanOrEqual(phaseCountForStage(s));
       for (const entry of boss.patterns) {
         const list = Array.isArray(entry) ? entry : [entry];
         for (const p of list) {
@@ -126,5 +127,24 @@ describe('boss draw paths', () => {
     const tinted = { ...STAGES[0].boss, x: 240, y: 130, r: 50, hp: 100, stageNum: 1, tint: '#ff0000' };
     const gTint = { boss: tinted, bossAngle: 0.7, bossTimer: 1.2, bossMaxHp: 100 };
     expect(() => drawBoss(gTint)).not.toThrow();
+  });
+});
+
+describe('createBoss difficulty integration', () => {
+  it('boss hp matches bossMaxHp and phaseCount matches the formula', () => {
+    for (let s = 1; s <= STAGES.length; s++) {
+      const g = {
+        currentStage: s,
+        bossMaxHp: 0, bossPhase: 0, bossTimer: 0, bossAngle: 0,
+        boss: null, enemies: [], enemyBullets: [], playerBullets: [],
+        player: null, particles: [], powerups: [], score: 0, loopMult: 1,
+        diffMult: 1, state: 1, stageClearTimer: 0, victoryTimer: 0,
+        saveHS() {}, startStage() {},
+      };
+      const boss = createBoss(g);
+      expect(boss.hp).toBe(g.bossMaxHp);
+      expect(g.bossMaxHp).toBe(bossHpForStage(s));
+      expect(boss.phaseCount).toBe(phaseCountForStage(s));
+    }
   });
 });

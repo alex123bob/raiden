@@ -9,7 +9,7 @@ import { STAGES } from '../stages/stageData.js';
 
 export function createBoss(g) {
   const def = STAGES[g.currentStage - 1].boss;
-  g.bossMaxHp = def.hp;
+  g.bossMaxHp = bossHpForStage(g.currentStage);
   g.bossPhase = 0;
   g.bossTimer = 0;
   g.bossAngle = 0;
