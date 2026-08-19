@@ -484,6 +484,8 @@ git commit -m "refactor: extract audio system into src/core/audio.js"
 
 Source: index.html:63–112 (INPUT) + 114–314 (TOUCH). Module-local (input-private): `isTouch, TC, STICK_R, STICK_DEAD, STICK_HOME, stick, roles, firePressed, bombPressed`. Game-owned (shared): `keys, moveVec, state, settingsOpen, soundOn, gameSpeed, loopMult, score, highScore`.
 
+> **⚠️ SUPERSEDED (execution note):** the code block below is an approximation that does NOT faithfully match the actual touch code at index.html:114–314. The committed `src/core/input.js` was ported **directly from the source** (source is authoritative) applying only the identifier conversions and signatures listed here. When reviewing/executing this task, trust `index.html:63–314` over the block below. The exported interface (the part Task 16 depends on) is unchanged: `initInput(g)`, `drawTouchControls(g)`, `isTouch`.
+
 - [ ] **Step 1: Create `src/core/input.js`**
 
 ```js
