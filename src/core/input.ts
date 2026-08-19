@@ -9,7 +9,10 @@ export const isTouch = ('ontouchstart' in window) ||
 
 function handleKeyPress(g, code) {
   if (g.settingsOpen) {
-    if (code === 'KeyM')        g.soundOn = !g.soundOn;
+    if (code === 'KeyM') {
+      g.soundOn = !g.soundOn;
+      if (g.audio) g.audio.setEnabled(g.soundOn);
+    }
     if (code === 'BracketLeft') cycleSpeed(g, -1);
     if (code === 'BracketRight')cycleSpeed(g, 1);
     if (code === 'KeyS')        g.settingsOpen = false;
