@@ -1,5 +1,6 @@
 import { W, H } from '../config.js';
 import { ctx } from '../canvas.js';
+import { STAGES } from './stageData.js';
 
 // === STARFIELD ===
 const STAR_LAYERS = [
@@ -31,18 +32,6 @@ function drawStars() {
 }
 
 // === STAGE BACKGROUNDS ===
-// Temporary local copy of STAGE_BG; replaced by stageData.bg in Task 20.
-const STAGE_BG = [
-  { baseFill: '#020208', starColor: ['rgba(255,255,255,0.4)', 'rgba(255,255,255,0.7)', 'rgba(200,220,255,1.0)'] },
-  { baseFill: '#0f0c08', starColor: ['rgba(200,190,170,0.3)', 'rgba(210,200,180,0.5)', 'rgba(220,210,190,0.8)'] },
-  { baseFill: '#1a0005', starColor: ['rgba(255,160,160,0.35)', 'rgba(255,120,120,0.6)', 'rgba(255,200,200,0.9)'] },
-  { baseFill: '#051005', starColor: null },
-  { baseFill: '#1a0800', starColor: null },
-  { baseFill: '#080810', starColor: ['rgba(180,180,200,0.25)', 'rgba(190,190,210,0.45)', 'rgba(210,210,230,0.7)'] },
-  { baseFill: '#000000', starColor: ['rgba(160,80,255,0.3)', 'rgba(180,100,255,0.5)', 'rgba(200,140,255,0.8)'] },
-  { baseFill: '#100005', starColor: null },
-];
-
 let bgRocks     = [];
 let bgClouds    = [];
 let bgBubbles   = [];
@@ -53,141 +42,146 @@ let bgParticles = [];
 let bgWalls     = [];
 let bgStage     = 1;
 
-function initBackground(stage) {
+function buildRocks() {
+  for (let i = 0; i < 14; i++) {
+    bgRocks.push({ x: Math.random()*W, y: Math.random()*H, r: 8+Math.random()*12,
+      spd: 60+Math.random()*40, rot: Math.random()*Math.PI*2,
+      rotSpd: (Math.random()-0.5)*0.8, layer: 0 });
+  }
+  for (let i = 0; i < 8; i++) {
+    bgRocks.push({ x: Math.random()*W, y: Math.random()*H, r: 5+Math.random()*8,
+      spd: 100+Math.random()*40, rot: Math.random()*Math.PI*2,
+      rotSpd: (Math.random()-0.5)*1.2, layer: 1 });
+  }
+}
+
+function buildClouds() {
+  for (let i = 0; i < 12; i++) {
+    bgClouds.push({ x: Math.random()*W, y: Math.random()*H,
+      w: 80+Math.random()*80, h: 40+Math.random()*40,
+      alpha: 0.06+Math.random()*0.06, spd: 20+Math.random()*20,
+      hue: Math.random()<0.5 ? '#cc2244' : '#aa1133' });
+  }
+}
+
+function buildBubbles() {
+  for (let i = 0; i < 40; i++) {
+    bgBubbles.push({ x: Math.random()*W, y: Math.random()*H,
+      r: 4+Math.random()*8, alpha: 0.08+Math.random()*0.12,
+      spd: 18+Math.random()*22, wobbleAmp: 8+Math.random()*14,
+      wobbleFreq: 0.6+Math.random()*0.8, wobbleOff: Math.random()*Math.PI*2,
+      color: Math.random()<0.6 ? '#44ee44' : '#aaee00',
+      t: Math.random()*100 });
+  }
+}
+
+function buildStreaks() {
+  for (let i = 0; i < 30; i++) {
+    bgStreaks.push({ x: Math.random()*W, y: Math.random()*H,
+      w: 40+Math.random()*80, h: 1+Math.floor(Math.random()*2),
+      spd: 300+Math.random()*200, alpha: 0.18+Math.random()*0.25,
+      color: Math.random()<0.7 ? '#ff8800' : '#ffcc44' });
+  }
+}
+
+function buildHulls() {
+  for (let i = 0; i < 10; i++) {
+    bgHulls.push({
+      x: Math.random() * (W - 120),
+      y: Math.random() * H,
+      w: 60 + Math.random() * 60,
+      h: 12 + Math.random() * 14,
+      spd: 25 + Math.random() * 15,
+      alpha: 0.18 + Math.random() * 0.12,
+    });
+  }
+}
+
+function buildWisps() {
+  for (let i = 0; i < 8; i++) {
+    const x1 = Math.random()*W, y1 = Math.random()*H;
+    bgWisps.push({ x1, y1,
+      x2: x1+(Math.random()-0.5)*160, y2: y1+(Math.random()-0.5)*100,
+      cx1: x1+(Math.random()-0.5)*80, cy1: y1+(Math.random()-0.5)*80,
+      cx2: x1+(Math.random()-0.5)*80, cy2: y1+(Math.random()-0.5)*80,
+      alpha: 0.04+Math.random()*0.06,
+      color: Math.random()<0.5 ? '#9944ff' : '#cc88ff',
+      width: 1+Math.random()*2 });
+  }
+}
+
+function buildWalls() {
+  for (let i = 0; i < 8; i++) {
+    bgWalls.push({ side:'left', y: i*(H/8), baseX: 30+Math.random()*20,
+      h: H/8+4, sineAmp: 14+Math.random()*10,
+      sineFreq: 0.4+Math.random()*0.4, sineOff: Math.random()*Math.PI*2, color:'#550011' });
+    bgWalls.push({ side:'right', y: i*(H/8), baseX: W-30-Math.random()*20,
+      h: H/8+4, sineAmp: 14+Math.random()*10,
+      sineFreq: 0.4+Math.random()*0.4, sineOff: Math.random()*Math.PI*2, color:'#550011' });
+  }
+  for (let i = 0; i < 50; i++) {
+    bgParticles.push({ x: Math.random()*W, y: Math.random()*H,
+      r: 1+Math.random()*2, spd: 30+Math.random()*50,
+      alpha: 0.3+Math.random()*0.4,
+      color: Math.random()<0.7 ? '#ff2200' : '#ff6600' });
+  }
+}
+
+function stageFeatures(stage) {
+  return STAGES[Math.max(0, Math.min(STAGES.length - 1, stage - 1))].bg.features || [];
+}
+
+export function initBackground(stage) {
   bgStage = stage;
   bgRocks.length = 0; bgClouds.length = 0; bgBubbles.length = 0;
   bgStreaks.length = 0; bgHulls.length = 0; bgWisps.length = 0;
   bgParticles.length = 0; bgWalls.length = 0;
 
-  if (stage === 1) return; // stars only — stage 6 has hulls too
-
-  if (stage === 2) {
-    for (let i = 0; i < 14; i++) {
-      bgRocks.push({ x: Math.random()*W, y: Math.random()*H, r: 8+Math.random()*12,
-        spd: 60+Math.random()*40, rot: Math.random()*Math.PI*2,
-        rotSpd: (Math.random()-0.5)*0.8, layer: 0 });
-    }
-    for (let i = 0; i < 8; i++) {
-      bgRocks.push({ x: Math.random()*W, y: Math.random()*H, r: 5+Math.random()*8,
-        spd: 100+Math.random()*40, rot: Math.random()*Math.PI*2,
-        rotSpd: (Math.random()-0.5)*1.2, layer: 1 });
-    }
-    return;
-  }
-
-  if (stage === 3) {
-    for (let i = 0; i < 12; i++) {
-      bgClouds.push({ x: Math.random()*W, y: Math.random()*H,
-        w: 80+Math.random()*80, h: 40+Math.random()*40,
-        alpha: 0.06+Math.random()*0.06, spd: 20+Math.random()*20,
-        hue: Math.random()<0.5 ? '#cc2244' : '#aa1133' });
-    }
-    return;
-  }
-
-  if (stage === 4) {
-    for (let i = 0; i < 40; i++) {
-      bgBubbles.push({ x: Math.random()*W, y: Math.random()*H,
-        r: 4+Math.random()*8, alpha: 0.08+Math.random()*0.12,
-        spd: 18+Math.random()*22, wobbleAmp: 8+Math.random()*14,
-        wobbleFreq: 0.6+Math.random()*0.8, wobbleOff: Math.random()*Math.PI*2,
-        color: Math.random()<0.6 ? '#44ee44' : '#aaee00',
-        t: Math.random()*100 });
-    }
-    return;
-  }
-
-  if (stage === 5) {
-    for (let i = 0; i < 30; i++) {
-      bgStreaks.push({ x: Math.random()*W, y: Math.random()*H,
-        w: 40+Math.random()*80, h: 1+Math.floor(Math.random()*2),
-        spd: 300+Math.random()*200, alpha: 0.18+Math.random()*0.25,
-        color: Math.random()<0.7 ? '#ff8800' : '#ffcc44' });
-    }
-    return;
-  }
-
-  if (stage === 6) {
-    for (let i = 0; i < 10; i++) {
-      bgHulls.push({
-        x: Math.random() * (W - 120),
-        y: Math.random() * H,
-        w: 60 + Math.random() * 60,
-        h: 12 + Math.random() * 14,
-        spd: 25 + Math.random() * 15,
-        alpha: 0.18 + Math.random() * 0.12,
-      });
-    }
-    return;
-  }
-
-  if (stage === 7) {
-    for (let i = 0; i < 8; i++) {
-      const x1 = Math.random()*W, y1 = Math.random()*H;
-      bgWisps.push({ x1, y1,
-        x2: x1+(Math.random()-0.5)*160, y2: y1+(Math.random()-0.5)*100,
-        cx1: x1+(Math.random()-0.5)*80, cy1: y1+(Math.random()-0.5)*80,
-        cx2: x1+(Math.random()-0.5)*80, cy2: y1+(Math.random()-0.5)*80,
-        alpha: 0.04+Math.random()*0.06,
-        color: Math.random()<0.5 ? '#9944ff' : '#cc88ff',
-        width: 1+Math.random()*2 });
-    }
-    return;
-  }
-
-  if (stage === 8) {
-    for (let i = 0; i < 8; i++) {
-      bgWalls.push({ side:'left', y: i*(H/8), baseX: 30+Math.random()*20,
-        h: H/8+4, sineAmp: 14+Math.random()*10,
-        sineFreq: 0.4+Math.random()*0.4, sineOff: Math.random()*Math.PI*2, color:'#550011' });
-      bgWalls.push({ side:'right', y: i*(H/8), baseX: W-30-Math.random()*20,
-        h: H/8+4, sineAmp: 14+Math.random()*10,
-        sineFreq: 0.4+Math.random()*0.4, sineOff: Math.random()*Math.PI*2, color:'#550011' });
-    }
-    for (let i = 0; i < 50; i++) {
-      bgParticles.push({ x: Math.random()*W, y: Math.random()*H,
-        r: 1+Math.random()*2, spd: 30+Math.random()*50,
-        alpha: 0.3+Math.random()*0.4,
-        color: Math.random()<0.7 ? '#ff2200' : '#ff6600' });
-    }
-    return;
-  }
+  const feat = stageFeatures(stage);
+  if (feat.includes('rocks'))   buildRocks();
+  if (feat.includes('clouds'))  buildClouds();
+  if (feat.includes('bubbles')) buildBubbles();
+  if (feat.includes('streaks')) buildStreaks();
+  if (feat.includes('hulls'))   buildHulls();
+  if (feat.includes('wisps'))   buildWisps();
+  if (feat.includes('walls'))   buildWalls();
 }
 
-function updateBackground(dt) {
+export function updateBackground(dt) {
   const stage = bgStage;
-  if (stage === 2) {
+  const feat = stageFeatures(stage);
+  if (feat.includes('rocks')) {
     bgRocks.forEach(r => {
       r.y += r.spd * dt; r.rot += r.rotSpd * dt;
       if (r.y > H + r.r*2) { r.y = -r.r*2; r.x = Math.random()*W; }
     });
   }
-  if (stage === 3) {
+  if (feat.includes('clouds')) {
     bgClouds.forEach(c => {
       c.y += c.spd * dt;
       if (c.y > H + c.h) { c.y = -c.h; c.x = Math.random()*W; }
     });
   }
-  if (stage === 4) {
+  if (feat.includes('bubbles')) {
     bgBubbles.forEach(b => {
       b.t += dt; b.y -= b.spd * dt;
       b.x += Math.sin(b.t * b.wobbleFreq + b.wobbleOff) * b.wobbleAmp * dt;
       if (b.y < -b.r*2) { b.y = H+b.r*2; b.x = Math.random()*W; }
     });
   }
-  if (stage === 5) {
+  if (feat.includes('streaks')) {
     bgStreaks.forEach(s => {
       s.y += s.spd * dt;
       if (s.y > H+4) { s.y = -4; s.x = Math.random()*(W-s.w); }
     });
   }
-  if (stage === 6) {
+  if (feat.includes('hulls')) {
     bgHulls.forEach(h => {
       h.y += h.spd * dt;
       if (h.y > H+h.h) { h.y = -h.h; h.x = Math.random()*(W-h.w); }
     });
   }
-  if (stage === 8) {
+  if (feat.includes('walls')) {
     bgParticles.forEach(p => {
       p.y -= p.spd * dt;
       if (p.y < -p.r*2) { p.y = H+p.r*2; p.x = Math.random()*W; }
@@ -195,14 +189,14 @@ function updateBackground(dt) {
   }
 }
 
-function drawBackground(g) {
+export function drawBackground(g) {
   const stage = g.currentStage;
-  const cfg = STAGE_BG[Math.max(0, Math.min(7, stage-1))];
+  const cfg = STAGES[Math.max(0, Math.min(STAGES.length - 1, stage - 1))].bg;
+  const feat = stageFeatures(stage);
   ctx.fillStyle = cfg.baseFill;
   ctx.fillRect(0, 0, W, H);
 
   if (cfg.starColor) {
-    // Save current colors so the title screen's classic starfield isn't left tinted
     const savedColors = STAR_LAYERS.map(l => l.color);
     STAR_LAYERS[0].color = cfg.starColor[0];
     STAR_LAYERS[1].color = cfg.starColor[1];
@@ -214,7 +208,7 @@ function drawBackground(g) {
     STAR_LAYERS.forEach((l, i) => { l.color = savedColors[i]; });
   }
 
-  if (stage === 2) {
+  if (feat.includes('rocks')) {
     bgRocks.forEach(r => {
       ctx.save(); ctx.translate(r.x, r.y); ctx.rotate(r.rot);
       ctx.fillStyle = r.layer===0 ? 'rgba(130,120,110,0.5)' : 'rgba(100,95,85,0.45)';
@@ -224,7 +218,7 @@ function drawBackground(g) {
     });
   }
 
-  if (stage === 3) {
+  if (feat.includes('clouds')) {
     bgClouds.forEach(c => {
       ctx.save(); ctx.globalAlpha = c.alpha; ctx.fillStyle = c.hue;
       ctx.beginPath(); ctx.ellipse(c.x, c.y, c.w/2, c.h/2, 0, 0, Math.PI*2); ctx.fill();
@@ -233,7 +227,7 @@ function drawBackground(g) {
     ctx.globalAlpha = 1;
   }
 
-  if (stage === 4) {
+  if (feat.includes('bubbles')) {
     bgBubbles.forEach(b => {
       ctx.save(); ctx.globalAlpha = b.alpha; ctx.fillStyle = b.color;
       ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
@@ -244,7 +238,7 @@ function drawBackground(g) {
     ctx.globalAlpha = 1;
   }
 
-  if (stage === 5) {
+  if (feat.includes('streaks')) {
     bgStreaks.forEach(s => {
       ctx.save(); ctx.globalAlpha = s.alpha; ctx.fillStyle = s.color;
       ctx.fillRect(s.x, s.y, s.w, s.h);
@@ -256,7 +250,7 @@ function drawBackground(g) {
     ctx.globalAlpha = 1;
   }
 
-  if (stage === 6) {
+  if (feat.includes('hulls')) {
     bgHulls.forEach(h => {
       ctx.save(); ctx.globalAlpha = h.alpha;
       ctx.fillStyle = '#1a1a28'; ctx.fillRect(h.x, h.y, h.w, h.h);
@@ -272,7 +266,7 @@ function drawBackground(g) {
     ctx.globalAlpha = 1;
   }
 
-  if (stage === 7) {
+  if (feat.includes('wisps')) {
     bgWisps.forEach(w => {
       ctx.save(); ctx.globalAlpha = w.alpha; ctx.strokeStyle = w.color; ctx.lineWidth = w.width;
       ctx.beginPath(); ctx.moveTo(w.x1, w.y1);
@@ -282,7 +276,7 @@ function drawBackground(g) {
     ctx.globalAlpha = 1;
   }
 
-  if (stage === 8) {
+  if (feat.includes('walls')) {
     const t = g.stageTimer;
     bgWalls.forEach(w => {
       const xOff = Math.sin(t * w.sineFreq + w.sineOff) * w.sineAmp;
@@ -306,4 +300,4 @@ function drawBackground(g) {
   }
 }
 
-export { updateStars, drawStars, initBackground, updateBackground, drawBackground };
+export { updateStars, drawStars };
