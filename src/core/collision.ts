@@ -1,4 +1,3 @@
-import { spawnExplosion } from '../entities/Particle.js';
 import { killPlayer } from '../entities/Player.js';
 import { tryDropPowerup, checkPlayerVsPowerups } from '../entities/Powerup.js';
 import { onBossDeath } from '../entities/Boss.js';
@@ -17,8 +16,8 @@ export function checkPlayerBulletsVsEnemies(g) {
       const b = g.playerBullets[j];
       if (circleHit(e.x, e.y, e.r, b.x, b.y, b.r)) {
         e.hp -= b.dmg;
-        if (b.type === 'bullet' && b.lv === 5) {
-          spawnExplosion(b.x, b.y, 0.5, '#ffffff', g);
+        if (b.def.key === 'vulcan' && b.lv === 5) {
+          g.spawnParticles('explosion', b.x, b.y, { size: 0.5, color: '#ffffff' });
         }
         if (!b.pierce) { g.playerBullets.splice(j, 1); j--; }
       }
@@ -26,7 +25,7 @@ export function checkPlayerBulletsVsEnemies(g) {
     if (e.hp <= 0) {
       g.score += e.score * g.loopMult;
       g.saveHS();
-      spawnExplosion(e.x, e.y, e.type + 1, e.color, g);
+      g.spawnParticles('explosion', e.x, e.y, { size: e.type + 1, color: e.color });
       tryDropPowerup(e, g);
       g.enemies.splice(i, 1);
     }
@@ -62,8 +61,8 @@ export function checkPlayerBulletsVsBoss(g) {
     const b = g.playerBullets[j];
     if (circleHit(g.boss.x, g.boss.y, g.boss.r, b.x, b.y, b.r)) {
       g.boss.hp -= b.dmg;
-      if (b.type === 'bullet' && b.lv === 5) {
-        spawnExplosion(b.x, b.y, 0.5, '#ffffff', g);
+      if (b.def.key === 'vulcan' && b.lv === 5) {
+        g.spawnParticles('explosion', b.x, b.y, { size: 0.5, color: '#ffffff' });
       }
       if (!b.pierce) { g.playerBullets.splice(j, 1); j--; }
     }

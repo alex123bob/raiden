@@ -4,7 +4,7 @@ import { diffMultFor } from './difficulty.js';
 import { initBackground, updateStars, drawStars, updateBackground, drawBackground } from '../stages/background.js';
 import { updateParticles, drawParticles } from '../entities/Particle.js';
 import { createPlayer, drawPlayer, updatePlayer } from '../entities/Player.js';
-import { updatePlayerBullets, drawPlayerBullets, drawLaserBeam,
+import { updatePlayerBullets, drawPlayerBullets,
          updateEnemyBullets, drawEnemyBullets } from '../entities/Bullet.js';
 import { drawEnemy, updateEnemies } from '../entities/Enemy.js';
 import { updatePowerups, drawPowerups } from '../entities/Powerup.js';
@@ -144,11 +144,10 @@ export class Game {
     else {
       this.enemies.forEach(drawEnemy);
       drawBoss(this);
-      drawEnemyBullets(this);
+      drawEnemyBullets(this.renderer, this);
       drawPowerups(this.renderer, this);
-      drawPlayerBullets(this);
+      drawPlayerBullets(this.renderer, this);
       drawPlayer(this.player);
-      drawLaserBeam(this.player);
       drawParticles(this.renderer, this);
       drawHUD(this);
       if (this.state === STATE.PAUSED)     drawPause(this);
