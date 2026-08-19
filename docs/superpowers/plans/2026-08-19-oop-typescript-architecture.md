@@ -1251,7 +1251,7 @@ export function mkBullet(kindKey: 'vulcan' | 'spread' | 'missile', x: number, y:
 
 export function spawnEnemyBullet(ctx: GameContext, x: number, y: number,
                                  vx: number, vy: number, clr: string,
-                                 r = 4, delay = 0): Bullet {
+                                 r = 5, delay = 0): Bullet {
   const b = new Bullet(BULLET_KINDS.get('enemy')!, x, y, vx, vy);
   b.r = r;
   b.clr = clr;
@@ -1385,6 +1385,7 @@ export function fireSuper(p: Player, ctx: GameContext): void {
         const b = mkBullet('missile', p.x + offset, p.y - 20, 0);
         b.vx = offset * 0.5 + Math.sin(off) * 80;
         b.vy = -320;
+        b.r = 6;
         b.dmg = 20;
         b.life = 2.5;
         b.homingDelay = 0;
@@ -2069,7 +2070,7 @@ export class Enemy extends Entity {
         const side = k % 2 === 0 ? -1 : 1;
         const off = side * 0.4 * Math.ceil(k / 2);
         const a = Math.atan2(dy, dx) + off;
-        spawnEnemyBullet(ctx, this.x, this.y, Math.cos(a) * spd, Math.sin(a) * spd, '#ff4444');
+        spawnEnemyBullet(ctx, this.x, this.y, Math.cos(a) * spd, Math.sin(a) * spd, '#ff4444', 4);
       }
     }
   }
@@ -2144,7 +2145,7 @@ export const fighter: EnemyType = {
     const dx = ctx.player!.x - e.x, dy = ctx.player!.y - e.y;
     const d = Math.sqrt(dx * dx + dy * dy) || 1;
     const spd = 190 * ctx.diffMult;
-    spawnEnemyBullet(ctx, e.x, e.y, (dx / d) * spd, (dy / d) * spd, '#ff4444');
+    spawnEnemyBullet(ctx, e.x, e.y, (dx / d) * spd, (dy / d) * spd, '#ff4444', 4);
   },
   movement: movePathOrDown,
 };
@@ -2175,7 +2176,7 @@ export const gunship: EnemyType = {
     const spd = 190 * ctx.diffMult;
     [-0.28, 0, 0.28].forEach(a => {
       const ang = Math.atan2(dy, dx) + a;
-      spawnEnemyBullet(ctx, e.x, e.y, Math.cos(ang) * spd, Math.sin(ang) * spd, '#ff8800');
+      spawnEnemyBullet(ctx, e.x, e.y, Math.cos(ang) * spd, Math.sin(ang) * spd, '#ff8800', 4);
     });
   },
   movement: movePathOrDown,
@@ -2206,7 +2207,7 @@ export const bomber: EnemyType = {
     const spd = 190 * ctx.diffMult;
     for (let i = -2; i <= 2; i++) {
       const ang = Math.PI / 2 + i * 0.24;
-      spawnEnemyBullet(ctx, e.x, e.y, Math.cos(ang) * spd * 0.75, Math.sin(ang) * spd * 0.75, '#ffcc00');
+      spawnEnemyBullet(ctx, e.x, e.y, Math.cos(ang) * spd * 0.75, Math.sin(ang) * spd * 0.75, '#ffcc00', 4);
     }
   },
   movement: movePathOrDown,

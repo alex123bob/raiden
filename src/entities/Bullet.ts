@@ -72,7 +72,7 @@ export function mkBullet(kindKey: 'vulcan' | 'spread' | 'missile', x: number, y:
 
 export function spawnEnemyBullet(ctx: GameContext, x: number, y: number,
                                  vx: number, vy: number, clr: string,
-                                 r = 4, delay = 0): Bullet {
+                                 r = 5, delay = 0): Bullet {
   const b = new Bullet(BULLET_KINDS.get('enemy')!, x, y, vx, vy);
   b.r = r;
   b.clr = clr;
@@ -200,6 +200,7 @@ export function fireSuper(p: Player, ctx: GameContext): void {
         const b = mkBullet('missile', p.x + offset, p.y - 20, 0);
         b.vx = offset * 0.5 + Math.sin(off) * 80;
         b.vy = -320;
+        b.r = 6;
         b.dmg = 20;
         b.life = 2.5;
         b.homingDelay = 0;
