@@ -152,6 +152,53 @@ describe('boss draw paths', () => {
   });
 });
 
+describe('Boss.update behavior', () => {
+  it('advances bossPhase as hp drops', () => {
+    const g = stubContext({ currentStage: 6 });   // carrier: phaseCount 4
+    const boss = createBoss(g);
+    const max = boss.maxHp;
+    boss.update(1 / 60, g);
+    expect(g.bossPhase).toBe(0);
+    boss.hp = max * 0.7;
+    boss.update(1 / 60, g);
+    expect(g.bossPhase).toBe(1);   // 3 - floor(0.7*4) = 1
+    boss.hp = max * 0.3;
+    boss.update(1 / 60, g);
+    expect(g.bossPhase).toBe(2);   // 3 - floor(0.3*4) = 2
+    boss.hp = 0;
+    boss.update(1 / 60, g);
+    expect(g.bossPhase).toBe(3);
+  });
+
+  it('spawns minions on the spawnMinions cadence', () => {
+    const g = stubContext({ currentStage: 6, diffMult: 1 });
+    const boss = createBoss(g);
+    boss.update(3.01, g);
+    expect(g.enemies.length).toBe(1);
+    expect(boss.minionTimer).toBeCloseTo(3.0, 5);
+  });
+
+  it('phantom onUpdate flickers alpha', () => {
+    const g = stubContext({ currentStage: 7 });
+    const boss = createBoss(g);
+    boss.update(0.1, g);
+    expect(boss.phantomAlpha).toBeGreaterThan(0.3);
+    expect(boss.phantomAlpha).toBeLessThan(1.0);
+  });
+});
+
+describe('boss def defaults', () => {
+  it('each def default patterns match its archetype first-appearance stage', () => {
+    const firstAppearance: Record<string, number> = {
+      blaze: 1, hexa: 2, dreadnaught: 3, viper: 4, solar: 5, carrier: 6, phantom: 7, tyrant: 8,
+    };
+    for (const def of BOSS_TYPES.all()) {
+      const stageDef = STAGES[firstAppearance[def.key] - 1].boss;
+      expect(def.patterns, def.key).toEqual(stageDef.patterns);
+    }
+  });
+});
+
 describe('createBoss difficulty integration', () => {
   it('boss hp matches bossMaxHp and phaseCount matches the formula', () => {
     for (let s = 1; s <= STAGES.length; s++) {
