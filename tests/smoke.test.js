@@ -44,10 +44,10 @@ describe('game smoke test (real module graph, stubbed DOM)', () => {
     expect(game.currentStage).toBe(2);
   });
 
-  it('reaches VICTORY after stage 8 on loop 1, and restarts the loop on Enter', () => {
+  it('reaches VICTORY after stage 18 on loop 1, and restarts the loop on Enter', () => {
     const g2 = new Game();
     g2.loopMult = 1; g2.startGame();
-    g2.currentStage = 8; g2.waveTable = [{ t: 0, boss: 8 }]; g2.waveIndex = 0; g2.stageTimer = 99;
+    g2.currentStage = 18; g2.waveTable = [{ t: 0, boss: 18 }]; g2.waveIndex = 0; g2.stageTimer = 99;
     let ts = 1000; g2.lastTime = ts; g2.loop(ts);
     expect(g2.boss).not.toBeNull();
     g2.boss.hp = 0;
@@ -56,7 +56,7 @@ describe('game smoke test (real module graph, stubbed DOM)', () => {
 
     const g3 = new Game();
     g3.loopMult = 2; g3.startGame();
-    g3.currentStage = 8; g3.waveTable = [{ t: 0, boss: 8 }]; g3.waveIndex = 0; g3.stageTimer = 99;
+    g3.currentStage = 18; g3.waveTable = [{ t: 0, boss: 18 }]; g3.waveIndex = 0; g3.stageTimer = 99;
     ts += 1000 / 60; g3.lastTime = ts; g3.loop(ts);
     g3.boss.hp = 0;
     g3.loop(ts += 1000 / 60);
