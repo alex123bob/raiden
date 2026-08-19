@@ -127,23 +127,3 @@ registerSfx({
     src.start(ac.currentTime);
   },
 });
-
-// Deprecated delegates: the old Player.ts/Powerup.ts/Bullet.ts/particles callers
-// still import these until Tasks 5-8 migrate them. Deleted in Task 8. They honor g.soundOn.
-const deprecatedBus = new WebAudioBus();
-export function sfxShoot(weapon: number, g: { soundOn: boolean }): void {
-  if (!g.soundOn) return;
-  deprecatedBus.play('shoot', { weapon });
-}
-export function sfxExplosion(size: number, g: { soundOn: boolean }): void {
-  if (!g.soundOn) return;
-  deprecatedBus.play('explosion', { size });
-}
-export function sfxPowerup(g: { soundOn: boolean }): void {
-  if (!g.soundOn) return;
-  deprecatedBus.play('powerup');
-}
-export function sfxBomb(g: { soundOn: boolean }): void {
-  if (!g.soundOn) return;
-  deprecatedBus.play('bomb');
-}

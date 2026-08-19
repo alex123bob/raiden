@@ -147,7 +147,7 @@ export class Game {
       drawEnemyBullets(this.renderer, this);
       drawPowerups(this.renderer, this);
       drawPlayerBullets(this.renderer, this);
-      drawPlayer(this.player);
+      if (this.player) drawPlayer(this.player, this.renderer, this);
       drawParticles(this.renderer, this);
       drawHUD(this);
       if (this.state === STATE.PAUSED)     drawPause(this);

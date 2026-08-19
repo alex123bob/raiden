@@ -32,23 +32,23 @@ export function checkPlayerBulletsVsEnemies(g) {
   }
 }
 
-export function checkEnemyBulletsVsPlayer(g) {
-  if (!g.player || g.player.dead || g.player.invTimer > 0) return;
-  for (let i = g.enemyBullets.length - 1; i >= 0; i--) {
-    const b = g.enemyBullets[i];
-    if (circleHit(b.x, b.y, b.r, g.player.x, g.player.y, g.player.r)) {
-      g.enemyBullets.splice(i, 1);
-      killPlayer(g);
+export function checkEnemyBulletsVsPlayer(ctx) {
+  if (!ctx.player || ctx.player.dead || ctx.player.invTimer > 0) return;
+  for (let i = ctx.enemyBullets.length - 1; i >= 0; i--) {
+    const b = ctx.enemyBullets[i];
+    if (circleHit(b.x, b.y, b.r, ctx.player.x, ctx.player.y, ctx.player.r)) {
+      ctx.enemyBullets.splice(i, 1);
+      killPlayer(ctx);
       return; // one hit per frame
     }
   }
 }
 
-export function checkEnemyBodiesVsPlayer(g) {
-  if (!g.player || g.player.dead || g.player.invTimer > 0) return;
-  g.enemies.forEach(e => {
-    if (circleHit(e.x, e.y, e.r, g.player.x, g.player.y, g.player.r)) {
-      killPlayer(g);
+export function checkEnemyBodiesVsPlayer(ctx) {
+  if (!ctx.player || ctx.player.dead || ctx.player.invTimer > 0) return;
+  ctx.enemies.forEach(e => {
+    if (circleHit(e.x, e.y, e.r, ctx.player.x, ctx.player.y, ctx.player.r)) {
+      killPlayer(ctx);
     }
   });
 }
@@ -70,10 +70,10 @@ export function checkPlayerBulletsVsBoss(g) {
   if (g.boss && g.boss.hp <= 0) onBossDeath(g);
 }
 
-export function checkBossBodyVsPlayer(g) {
-  if (!g.boss || !g.player || g.player.dead || g.player.invTimer > 0) return;
-  if (circleHit(g.boss.x, g.boss.y, g.boss.r, g.player.x, g.player.y, g.player.r)) {
-    killPlayer(g);
+export function checkBossBodyVsPlayer(ctx) {
+  if (!ctx.boss || !ctx.player || ctx.player.dead || ctx.player.invTimer > 0) return;
+  if (circleHit(ctx.boss.x, ctx.boss.y, ctx.boss.r, ctx.player.x, ctx.player.y, ctx.player.r)) {
+    killPlayer(ctx);
   }
 }
 
