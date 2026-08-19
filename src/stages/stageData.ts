@@ -34,7 +34,7 @@ export const STAGES = [
       ...[0,1,2,3,4,5,6,7].map(i => ({ t: 26 + i*0.18, type: 'fighter', path: ['form', W/2, -20, 136.5, i, 8] })),
       { t: 30, boss: 1 },
     ],
-    boss: { archetype: 'gunship', tint: null, r: 50, speed: 58, spawnMinions: false,
+    boss: { archetype: 1, tint: null, r: 50, speed: 58, spawnMinions: false,
       patterns: [
         { name: 'aimSpread', spdBase: 175, spdPhase: 35, count: 7, gap: 0.14, clr: '#ff2200' },
         { name: 'aimBurst',  spdBase: 175, spdPhase: 35, offsets: [-0.08, 0.08], clr: '#ff8800' },
@@ -66,7 +66,7 @@ export const STAGES = [
       ...[0,1,2,3,4,5,6,7].map(i => ({ t: 26 + i*0.18, type: 'fighter', path: ['form', W/2, -20, 188.5, i, 8] })),
       { t: 30, boss: 2 },
     ],
-    boss: { archetype: 'bomber', tint: null, r: 60, speed: 58, spawnMinions: false,
+    boss: { archetype: 2, tint: null, r: 60, speed: 58, spawnMinions: false,
       patterns: [
         { name: 'ring', spdBase: 120, spdPhase: 20, count: 8,  clr: '#4466ff' },
         { name: 'ring', spdBase: 120, spdPhase: 20, count: 12, clr: '#4466ff' },
@@ -95,7 +95,7 @@ export const STAGES = [
       ...[0,1,2,3,4,5,6,7].map(i => ({ t: 17 + i*0.15, type: 'fighter', path: ['form', W/2, -20, 192, i, 8] })),
       { t: 25, boss: 3 },
     ],
-    boss: { archetype: 'turret', tint: null, r: 50, speed: 58, spawnMinions: false,
+    boss: { archetype: 3, tint: null, r: 50, speed: 58, spawnMinions: false,
       patterns: [
         { name: 'sideAlternate', spdBase: 165, spdPhase: 30 },
         { name: 'sideAlternate', spdBase: 165, spdPhase: 30 },
@@ -316,7 +316,7 @@ export const STAGES = [
       { t: 28, boss: 9 },
     ],
     boss: {
-      archetype: 'bomber', tint: '#44ddff', r: 65, speed: 62, spawnMinions: false,
+      archetype: 2, tint: '#44ddff', r: 65, speed: 62, spawnMinions: false,
       patterns: [
         { name: 'ring',       spdBase: 190, spdPhase: 30, count: 8,  clr: '#44ddff' },
         { name: 'aimSpread',  spdBase: 190, spdPhase: 30, count: 5,  gap: 0.16, clr: '#44ddff' },
@@ -421,7 +421,7 @@ export const STAGES = [
       { t: 31, boss: 12 },
     ],
     boss: {
-      archetype: 'gunship', tint: '#ff66aa', r: 55, speed: 62, spawnMinions: false,
+      archetype: 1, tint: '#ff66aa', r: 55, speed: 62, spawnMinions: false,
       patterns: [
         { name: 'aimSpread', spdBase: 190, spdPhase: 32, count: 7, gap: 0.14, clr: '#ff66aa' },
         { name: 'aimBurst',  spdBase: 190, spdPhase: 32, offsets: [-0.08, 0.08], clr: '#ff88bb' },
@@ -528,7 +528,7 @@ export const STAGES = [
       { t: 29, boss: 15 },
     ],
     boss: {
-      archetype: 'turret', tint: '#dd44ff', r: 58, speed: 60, spawnMinions: false,
+      archetype: 3, tint: '#dd44ff', r: 58, speed: 60, spawnMinions: false,
       patterns: [
         { name: 'aimSpread', spdBase: 195, spdPhase: 34, count: 5, gap: 0.16, clr: '#dd44ff' },
         { name: 'aimSpread', spdBase: 195, spdPhase: 34, count: 7, gap: 0.14, clr: '#dd44ff' },
@@ -606,7 +606,7 @@ export const STAGES = [
       { t: 30, boss: 17 },
     ],
     boss: {
-      archetype: 'bomber', tint: '#ff4444', r: 70, speed: 60, spawnMinions: false,
+      archetype: 2, tint: '#ff4444', r: 70, speed: 60, spawnMinions: false,
       patterns: [
         [{ name: 'ring',     spdBase: 200, spdPhase: 36, count: 10, clr: '#ff4444' },
          { name: 'scatter',  spdBase: 200, spdPhase: 36, count: 2, clr: '#ff6666' }],

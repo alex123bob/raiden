@@ -2390,10 +2390,10 @@ node -e "
 const fs = require('fs');
 const p = 'src/stages/stageData.ts';
 let s = fs.readFileSync(p, 'utf8');
-s = s.replaceAll(/type: 0/g, \"type: 'fighter'\")
-     .replaceAll(/type: 1/g, \"type: 'gunship'\")
-     .replaceAll(/type: 2/g, \"type: 'bomber'\")
-     .replaceAll(/type: 3/g, \"type: 'turret'\");
+s = s.replaceAll(/\btype: 0/g, \"type: 'fighter'\")
+     .replaceAll(/\btype: 1/g, \"type: 'gunship'\")
+     .replaceAll(/\btype: 2/g, \"type: 'bomber'\")
+     .replaceAll(/\btype: 3/g, \"type: 'turret'\");
 fs.writeFileSync(p, s);
 "
 ```
