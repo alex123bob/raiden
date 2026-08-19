@@ -1048,6 +1048,9 @@ export class Powerup extends Entity {
     this.def.render(rc, this);
     rc.restore();
   }
+  apply(ctx: GameContext): void {
+    this.def.apply(this, ctx);
+  }
 }
 
 export function tryDropPowerup(e: Enemy, ctx: GameContext): void {
@@ -1089,9 +1092,8 @@ export function drawPowerups(rc: RenderContext, ctx: GameContext): void {
 `src/registries/powerups/weaponOrb.ts`:
 
 ```ts
-import type { GameContext } from '../../core/GameContext.js';
 import { WEAPON_NAMES, WEAPON_COLORS } from '../../entities/Bullet.js';
-import type { Powerup } from '../../entities/Powerup.js';
+import type { PowerupType } from '../../entities/Powerup.js';
 
 export const weaponOrb: PowerupType = {
   key: 'weapon',
@@ -1118,7 +1120,7 @@ export const weaponOrb: PowerupType = {
 `src/registries/powerups/bomb.ts`:
 
 ```ts
-import type { Powerup } from '../../entities/Powerup.js';
+import type { PowerupType } from '../../entities/Powerup.js';
 
 export const bomb: PowerupType = {
   key: 'bomb',
@@ -1130,7 +1132,7 @@ export const bomb: PowerupType = {
     rc.fillText('B', 0, 1);
   },
   apply(_pw, ctx) {
-    if (ctx.player) ctx.player.bombs = Math.min(3, ctx.player.bombs + 1);
+    ctx.player!.bombs = Math.min(3, ctx.player!.bombs + 1);
   },
 };
 ```

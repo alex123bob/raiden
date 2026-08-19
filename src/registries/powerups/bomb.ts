@@ -10,6 +10,6 @@ export const bomb: PowerupType = {
     rc.fillText('B', 0, 1);
   },
   apply(_pw, ctx) {
-    if (ctx.player) ctx.player.bombs = Math.min(3, ctx.player.bombs + 1);
+    ctx.player!.bombs = Math.min(3, ctx.player!.bombs + 1);
   },
 };
