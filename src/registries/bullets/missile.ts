@@ -16,7 +16,7 @@ export const missile: BulletKind = {
       const d2 = (ctx.boss.x - b.x) ** 2 + (ctx.boss.y - b.y) ** 2;
       if (d2 < nearD) { nearX = ctx.boss.x; nearY = ctx.boss.y; }
     }
-    if (nearX !== null) {
+    if (nearX !== null && nearY !== null) {
       const dx = nearX - b.x, dy = nearY - b.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
       b.vx += (dx / d * 340 - b.vx) * dt * 5;

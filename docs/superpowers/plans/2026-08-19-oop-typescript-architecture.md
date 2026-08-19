@@ -1182,6 +1182,7 @@ import { W, H } from '../config.js';
 import type { GameContext } from '../core/GameContext.js';
 import type { RenderContext } from '../core/Renderer.js';
 import { Entity } from '../core/Entity.js';
+import { BULLET_KINDS } from '../registries/bullets/index.js';
 
 // === BULLET KINDS ===
 
@@ -1300,7 +1301,6 @@ export function firePlayer(p: Player, ctx: GameContext): void {
       ctx.audio.play('shoot', { weapon: 0 });
 
     } else if (slot.type === 1) {
-      const halfFor = (count: number) => 0.35 + (lv >= 3 ? 0.05 : 0) + (lv >= 5 ? 0.10 : 0);
       if (lv === 1) {
         [UP + off - 0.30, UP + off, UP + off + 0.30].forEach(a =>
           ctx.playerBullets.push(mkSpreadBullet(p.x, p.y - 20, a, lv)));
@@ -1565,7 +1565,7 @@ export const missile: BulletKind = {
       const d2 = (ctx.boss.x - b.x) ** 2 + (ctx.boss.y - b.y) ** 2;
       if (d2 < nearD) { nearX = ctx.boss.x; nearY = ctx.boss.y; }
     }
-    if (nearX !== null) {
+    if (nearX !== null && nearY !== null) {
       const dx = nearX - b.x, dy = nearY - b.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
       b.vx += (dx / d * 340 - b.vx) * dt * 5;
@@ -1631,7 +1631,7 @@ export interface BulletPattern {
 export const BULLET_PATTERNS = makeRegistry<BulletPattern>();
 export const registerBulletPattern = BULLET_PATTERNS.register;
 
-function speedFor(boss: Boss, ctx: GameContext, opts: PatternOpts): number {
+function speedFor(boss: Boss, ctx: GameContext, opts: PatternOpts): { dx: number; dy: number; d: number; spd: number } {
   const dx = ctx.player!.x - boss.x, dy = ctx.player!.y - boss.y;
   const d = Math.sqrt(dx * dx + dy * dy) || 1;
   return { dx, dy, d, spd: (opts.spdBase + ctx.bossPhase * opts.spdPhase) * ctx.diffMult };
@@ -1652,8 +1652,8 @@ registerBulletPattern({
 registerBulletPattern({
   key: 'ring',
   fire(boss, ctx, opts) {
-    const { spd, spdF = 1 } = speedFor(boss, ctx, opts);
-    const { count = 0, clr = '#ff4444' } = opts;
+    const { spd } = speedFor(boss, ctx, opts);
+    const { count = 0, clr = '#ff4444', spdF = 1 } = opts;
     for (let i = 0; i < count; i++) {
       const a = ctx.bossAngle + (i / count) * Math.PI * 2;
       spawnEnemyBullet(ctx, boss.x, boss.y, Math.cos(a) * spd * spdF, Math.sin(a) * spd * spdF, clr);
@@ -1689,8 +1689,8 @@ registerBulletPattern({
 registerBulletPattern({
   key: 'laserSweep',
   fire(boss, ctx, opts) {
-    const { dx, dy, d, spd, spdF = 1 } = speedFor(boss, ctx, opts);
-    const { count = 0, halfSpan = 0, clr = '#ff8800' } = opts;
+    const { dx, dy, d, spd } = speedFor(boss, ctx, opts);
+    const { count = 0, halfSpan = 0, clr = '#ff8800', spdF = 1 } = opts;
     for (let i = 0; i < count; i++) {
       const a = ctx.bossAngle + (-halfSpan + (i / (count - 1)) * halfSpan * 2);
       spawnEnemyBullet(ctx, boss.x, boss.y, Math.cos(a) * spd * spdF, Math.sin(a) * spd * spdF, clr);
@@ -1702,8 +1702,8 @@ registerBulletPattern({
 registerBulletPattern({
   key: 'scatter',
   fire(boss, ctx, opts) {
-    const { spd, spdF = 1 } = speedFor(boss, ctx, opts);
-    const { count = 0, clr = '#ff8800' } = opts;
+    const { spd } = speedFor(boss, ctx, opts);
+    const { count = 0, clr = '#ff8800', spdF = 1 } = opts;
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
       spawnEnemyBullet(ctx, boss.x, boss.y, Math.cos(a) * spd * spdF, Math.sin(a) * spd * spdF, clr);
