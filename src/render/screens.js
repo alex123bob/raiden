@@ -1,4 +1,4 @@
-import { W, H, STATE } from '../config.js';
+import { W, H } from '../config.js';
 import { ctx } from '../canvas.js';
 import { isTouch } from '../core/input.js';
 
