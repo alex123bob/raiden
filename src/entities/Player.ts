@@ -1,7 +1,7 @@
 import { W, H, CHARGE_DURATION, STATE } from '../config.js';
 import { ctx } from '../canvas.js';
 import { WEAPON_COLORS, getFireRate, firePlayer, fireSuper } from './Bullet.js';
-import { spawnExplosion, spawnBombFlash } from '../core/particles.js';
+import { spawnExplosion, spawnBombFlash } from '../entities/Particle.js';
 import { sfxBomb } from '../core/audio.js';
 
 // Persistent laser state — beam is drawn directly each frame when firing, not stored in playerBullets

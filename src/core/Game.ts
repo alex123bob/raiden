@@ -2,7 +2,7 @@ import { W, H, STATE, STAGE_COUNT } from '../config.js';
 import { ctx } from '../canvas.js';
 import { diffMultFor } from './difficulty.js';
 import { initBackground, updateStars, drawStars, updateBackground, drawBackground } from '../stages/background.js';
-import { updateParticles, drawParticles } from './particles.js';
+import { updateParticles, drawParticles } from '../entities/Particle.js';
 import { createPlayer, drawPlayer, updatePlayer } from '../entities/Player.js';
 import { updatePlayerBullets, drawPlayerBullets, drawLaserBeam,
          updateEnemyBullets, drawEnemyBullets } from '../entities/Bullet.js';
@@ -15,9 +15,17 @@ import { buildWaveTable, updateWaves } from '../stages/waveGen.js';
 import { drawHUD } from '../render/hud.js';
 import { drawTitle, drawPause, drawSettings, drawGameOver, drawStageClear, drawVictory } from '../render/screens.js';
 import { drawTouchControls } from './input.js';
+import { CanvasRenderer, type RenderContext } from './Renderer.js';
+import { WebAudioBus, type AudioBus } from './audio.js';
+import { spawnParticleKind } from '../entities/Particle.js';
 
 export class Game {
+  readonly renderer: RenderContext;
+  readonly audio: AudioBus;
+
   constructor() {
+    this.renderer = new CanvasRenderer(ctx);
+    this.audio = new WebAudioBus();
     this.state = STATE.TITLE;
     this.settingsOpen = false;
     this.soundOn = true;
@@ -48,6 +56,10 @@ export class Game {
     this.victoryTimer = 0;
     this.lastTime = 0;
     this.loop = this.loop.bind(this);
+  }
+
+  spawnParticles(kind: string, x: number, y: number, opts?: Record<string, unknown>): void {
+    spawnParticleKind(kind, x, y, opts ?? {}, this);
   }
 
   saveHS() {
@@ -137,7 +149,7 @@ export class Game {
       drawPlayerBullets(this);
       drawPlayer(this.player);
       drawLaserBeam(this.player);
-      drawParticles(this);
+      drawParticles(this.renderer, this);
       drawHUD(this);
       if (this.state === STATE.PAUSED)     drawPause(this);
       if (this.state === STATE.STAGECLEAR) drawStageClear(this);

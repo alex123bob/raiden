@@ -1,6 +1,6 @@
 import { W, H, STATE, STAGE_COUNT } from '../config.js';
 import { ctx } from '../canvas.js';
-import { spawnExplosion } from '../core/particles.js';
+import { spawnExplosion } from '../entities/Particle.js';
 import { bossHpForStage, phaseCountForStage } from '../core/difficulty.js';
 import { mkEnemy, ENEMY_CFG } from './Enemy.js';
 import { STAGES } from '../stages/stageData.js';

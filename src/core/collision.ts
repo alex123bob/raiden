@@ -1,4 +1,4 @@
-import { spawnExplosion } from './particles.js';
+import { spawnExplosion } from '../entities/Particle.js';
 import { killPlayer } from '../entities/Player.js';
 import { tryDropPowerup, checkPlayerVsPowerups } from '../entities/Powerup.js';
 import { onBossDeath } from '../entities/Boss.js';

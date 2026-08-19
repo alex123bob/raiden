@@ -704,15 +704,17 @@ git commit -m "refactor: audio behind AudioBus interface with SFX registry"
 - Create: `src/entities/Particle.ts`, `src/registries/particles/explosion.ts`, `src/registries/particles/bombFlash.ts`, `src/registries/particles/index.ts`
 - Delete: `src/core/particles.js`
 
-- [ ] **Step 1: Write the failing particle test**
+- [ ] **Step 1: Design the failing particle test (created in Task 8)**
 
-Create `tests/particle.test.ts`:
+The particle unit test below is the TDD red-first spec, but **it must NOT be created in this task**. It imports `stubContext` from `tests/context-stub.ts`, which imports the `Player` class — which does not exist until Task 8. Vitest auto-collects every `tests/**/*.test.ts`, so creating `particle.test.ts` now would break `npm test`. The file is created in Task 8 (Step 3) with exactly this content. The source files in this task are verified by `npm test` (smoke drives particle spawn/update/render end-to-end):
 
 ```ts
 import { describe, it, expect } from 'vitest';
 import { PARTICLE_KINDS, registerParticleKind } from '../src/registries/particles/index.js';
 import { spawnParticleKind } from '../src/entities/Particle.js';
 import { stubContext } from './context-stub.js';
+import { CanvasRenderer } from '../src/core/Renderer.js';
+import { noopCtx } from './dom-setup.js';
 
 describe('particle kinds', () => {
   it('registers explosion and bombFlash', () => {
@@ -734,8 +736,9 @@ describe('particle kinds', () => {
     const g = stubContext();
     spawnParticleKind('bombFlash', 0, 0, {}, g);
     expect(g.particles.length).toBe(1);
+    const rc = new CanvasRenderer(noopCtx);
     expect(() => g.particles[0].update(1 / 60, g)).not.toThrow();
-    expect(() => g.particles[0].draw({} as never, g)).not.toThrow();
+    expect(() => g.particles[0].draw(rc, g)).not.toThrow();
   });
 
   it('an unknown kind is a silent no-op', () => {
@@ -787,7 +790,7 @@ export function stubContext(overrides: Partial<GameContext> = {}): GameContext {
 }
 ```
 
-> Note: `Player` is still a function-based module until Task 8, so `import { Player } from '../src/entities/Player.js'` fails until then. This test file can't run until Task 8. **Therefore: do not run `particle.test.ts` yet** — create the source files in Steps 3–6 and verify them via `npm test` (the existing suite) plus a manual `node` sanity check, then run the particle test in Task 8 after `Player` lands. Alternatively, land `Player`'s class in Task 8 and run the full suite then. The particle test steps below are marked as "run after Task 8".
+> `tests/context-stub.ts` is created now but nothing imports it until Task 8 (it imports the not-yet-existing `Player` class — vitest only auto-collects `*.test.ts`, so the dead file is harmless; tsc flags it, expected red). `tests/particle.test.ts` is created in Task 8.
 
 - [ ] **Step 3: Create `src/entities/Particle.ts`**
 
@@ -975,6 +978,13 @@ In `loop()`:
 - keep `if (this.state === STATE.PLAYING || this.state === STATE.STAGECLEAR) updateParticles(dt, this);`
 - change `drawParticles(this);` → `drawParticles(this.renderer, this);`
 
+**Repoint the other three importers of the deleted `core/particles.ts` module** to the wrapper exports in `entities/Particle.ts` (same names, same signatures):
+- `src/entities/Player.ts:4` → `import { spawnExplosion, spawnBombFlash } from '../entities/Particle.js';`
+- `src/entities/Boss.ts:3` → `import { spawnExplosion } from '../entities/Particle.js';`
+- `src/core/collision.ts:1` → `import { spawnExplosion } from '../entities/Particle.js';`
+
+> Without these, deleting `core/particles.ts` leaves dangling imports and the smoke test (which drives Player/Boss/collision) crashes.
+
 > `Game.ts` still uses the old function-call structure at this point; only the particle calls change. `npm test` (specifically smoke) is the gate.
 
 - [ ] **Step 6: Verify existing suite green**
@@ -990,7 +1000,7 @@ git add -A
 git commit -m "refactor: particles behind PARTICLE_KINDS registry"
 ```
 
-> The particle unit test from Step 1 is created but only runnable once `Player` is a class (Task 8) — it stays uncommitted-failing? No: **create it in Step 1 now, and keep it excluded from the runner** is not acceptable (vitest include is `tests/**/*.test.ts`). Instead, **do not create `tests/particle.test.ts` now** — fold its assertions into the Task 8 run. (TDD discipline for this foundational task is satisfied by the smoke test exercising particles end-to-end.)
+> `tests/particle.test.ts` is NOT created in this task (see Step 1) — it lands in Task 8. TDD discipline for this foundational task is satisfied by the smoke test exercising particle spawn/update/render end-to-end.
 
 ## Task 6: Powerup family
 
@@ -1972,7 +1982,7 @@ Delete the four deprecated `sfx*` wrappers from `src/core/audio.ts` (added in Ta
 
 - [ ] **Step 3: Create the particle test and run the full suite**
 
-Create `tests/particle.test.ts` exactly as written in Task 5 Step 1 (the file is created now that `Player` exists so `context-stub.ts` compiles).
+Create `tests/particle.test.ts` with exactly the content shown in Task 5 Step 1 (the file is created now that `Player` is a class, so `context-stub.ts` compiles).
 
 Run: `npm test` — Expected: PASS (36 tests: 33 + 3 particle tests).
 
