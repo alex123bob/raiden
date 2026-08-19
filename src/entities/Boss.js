@@ -31,6 +31,7 @@ export function createBoss(g) {
 }
 
 const offCanvas = document.createElement('canvas');
+let offSize = 0;
 
 function drawBossArchetype(c, b, angle, timer) {
   switch (b.archetype) {
@@ -48,18 +49,25 @@ function drawBossArchetype(c, b, angle, timer) {
 export function drawBoss(g) {
   const b = g.boss;
   if (!b) return;
+  if (!b.tint) {
+    drawBossArchetype(ctx, b, g.bossAngle, g.bossTimer);
+    drawBossHpBar(g);
+    return;
+  }
   const R = Math.ceil(b.r * 2.0) + 8;          // fits boss5's r*1.8 glow and boss8's pulsing outer
-  offCanvas.width = offCanvas.height = R * 2;
+  const size = R * 2;
+  if (offSize !== size) {
+    offCanvas.width = offCanvas.height = size;
+    offSize = size;
+  }
   const oc = offCanvas.getContext('2d');
   oc.setTransform(1, 0, 0, 1, 0, 0);
-  oc.clearRect(0, 0, R * 2, R * 2);
+  oc.clearRect(0, 0, size, size);
   drawBossArchetype(oc, { ...b, x: R, y: R }, g.bossAngle, g.bossTimer);
-  if (b.tint) {
-    oc.globalCompositeOperation = 'source-atop';
-    oc.fillStyle = b.tint;
-    oc.fillRect(0, 0, R * 2, R * 2);
-    oc.globalCompositeOperation = 'source-over';
-  }
+  oc.globalCompositeOperation = 'source-atop';
+  oc.fillStyle = b.tint;
+  oc.fillRect(0, 0, size, size);
+  oc.globalCompositeOperation = 'source-over';
   ctx.drawImage(offCanvas, b.x - R, b.y - R);
   drawBossHpBar(g);
 }

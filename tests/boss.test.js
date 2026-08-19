@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { STAGES } from '../src/stages/stageData.js';
-import { fireBoss } from '../src/entities/Boss.js';
+import { fireBoss, drawBoss } from '../src/entities/Boss.js';
 
 // pattern-name -> required option keys
 const REQUIRED = {
@@ -104,5 +104,24 @@ describe('fireBoss dispatch', () => {
     const gNoPlayer = makeG(boss);
     gNoPlayer.player = null;
     expect(() => fireBoss(gNoPlayer)).not.toThrow();
+  });
+});
+
+describe('boss draw paths', () => {
+  it('every stage 1-8 boss has tint null, so the direct-render fast path is used (pixel identity)', () => {
+    for (let s = 1; s <= 8; s++) {
+      expect(STAGES[s - 1].boss.tint, `stage ${s} tint`).toBeNull();
+    }
+  });
+
+  it('drawBoss renders every archetype without throwing (fast path and tint path)', () => {
+    for (let s = 1; s <= 8; s++) {
+      const boss = { ...STAGES[s - 1].boss, x: 240, y: 130, r: 50, hp: 100, stageNum: s };
+      const g = { boss, bossAngle: 0.7, bossTimer: 1.2, bossMaxHp: 100 };
+      expect(() => drawBoss(g), `stage ${s} fast path`).not.toThrow();
+    }
+    const tinted = { ...STAGES[0].boss, x: 240, y: 130, r: 50, hp: 100, stageNum: 1, tint: '#ff0000' };
+    const gTint = { boss: tinted, bossAngle: 0.7, bossTimer: 1.2, bossMaxHp: 100 };
+    expect(() => drawBoss(gTint)).not.toThrow();
   });
 });
