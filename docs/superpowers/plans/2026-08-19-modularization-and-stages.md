@@ -2536,9 +2536,9 @@ describe('buildWaveTable', () => {
     expect(table.length).toBe(38);
   });
 
-  it('stage 8 has exactly 57 entries with all regular enemies elite', () => {
+  it('stage 8 has exactly 60 entries with all regular enemies elite', () => {
     const table = buildWaveTable(STAGES[7], 1.0);
-    expect(table.length).toBe(57);
+    expect(table.length).toBe(60);   // 8+4+4+4+2+8+3+4+4+3+3+8+4+boss (verified against the switch via parity check)
     const regulars = table.filter(e => !e.boss);
     expect(regulars.length).toBeGreaterThan(0);
     expect(regulars.every(e => e.eliteHp === true)).toBe(true);
