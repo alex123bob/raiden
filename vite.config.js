@@ -6,7 +6,7 @@ export default defineConfig({
   build: { target: 'es2018' },
   test: {
     environment: 'node',
-    include: ['tests/**/*.test.js'],
-    setupFiles: ['tests/dom-setup.js'],
+    include: ['tests/**/*.test.ts'],
+    setupFiles: ['tests/dom-setup.ts'],
   },
 });
