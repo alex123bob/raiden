@@ -36,6 +36,7 @@ export interface GameContext {
   score: number;
   audio: AudioBus;
   spawnParticles(kind: string, x: number, y: number, opts?: Record<string, unknown>): void;
+  shake(mag: number, dur: number): void;
   saveHS(): void;
   startStage(n: number): void;
 }

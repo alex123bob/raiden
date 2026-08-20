@@ -58,6 +58,9 @@ export class Game implements GameContext {
   stageClearTimer = 0;
   victoryTimer = 0;
   lastTime = 0;
+  shakeTime = 0;
+  shakeDur = 0;
+  shakeMag = 0;
   readonly renderer: RenderContext;
   readonly audio: AudioBus;
   private loopFn: (ts: number) => void;
@@ -109,6 +112,13 @@ export class Game implements GameContext {
     spawnParticleKind(kind, x, y, opts ?? {}, this);
   }
 
+  shake(mag: number, dur: number): void {
+    // Take the stronger/longer of any overlapping shakes rather than stacking.
+    this.shakeMag = Math.max(this.shakeMag, mag);
+    this.shakeDur = Math.max(this.shakeDur, dur);
+    this.shakeTime = Math.max(this.shakeTime, dur);
+  }
+
   updateStageClear(dt: number): void {
     this.stageClearTimer -= dt;
     if (this.stageClearTimer <= 0) {
@@ -131,6 +141,7 @@ export class Game implements GameContext {
     if (this.state === STATE.PLAYING || this.state === STATE.STAGECLEAR) updateParticles(dt, this);
     if (this.state === STATE.STAGECLEAR) this.updateStageClear(dt);
     if (this.state === STATE.VICTORY) this.updateVictory(dt);
+    if (this.shakeTime > 0) this.shakeTime = Math.max(0, this.shakeTime - rawDt);
     if (this.state === STATE.PLAYING) {
       updatePlayer(dt, this);
       updatePlayerBullets(dt, this);
@@ -145,6 +156,16 @@ export class Game implements GameContext {
     ctx.textAlign = 'left';
     ctx.shadowBlur = 0;
     ctx.shadowColor = 'transparent';
+
+    // Screen shake: offset the whole world layer, restore before HUD/overlays.
+    let shaking = false;
+    if (this.shakeTime > 0 && this.shakeDur > 0) {
+      const k = (this.shakeTime / this.shakeDur) * this.shakeMag;
+      ctx.save();
+      ctx.translate((Math.random() - 0.5) * 2 * k, (Math.random() - 0.5) * 2 * k);
+      shaking = true;
+    }
+
     if (this.state === STATE.PLAYING || this.state === STATE.STAGECLEAR || this.state === STATE.PAUSED) {
       drawBackground(this.renderer, this);
     } else {
@@ -164,10 +185,12 @@ export class Game implements GameContext {
       drawPlayerBullets(this.renderer, this);
       if (this.player) drawPlayer(this.player, this.renderer, this);
       drawParticles(this.renderer, this);
+      if (shaking) { ctx.restore(); shaking = false; }
       drawHUD(this);
       if (this.state === STATE.PAUSED)     drawPause(this);
       if (this.state === STATE.STAGECLEAR) drawStageClear(this);
     }
+    if (shaking) ctx.restore();
     if (this.settingsOpen) drawSettings(this);
     drawTouchControls(this);
   }

@@ -40,6 +40,17 @@ describe('Player', () => {
     expect(g.keys['_bombUsed']).toBe(false);
   });
 
+  it('bomb triggers a screen shake', () => {
+    const g = stubContext();
+    let shaken = 0;
+    g.shake = (mag: number) => { shaken = mag; };
+    const p = g.player!;
+    p.bombs = 1;
+    g.keys['KeyB'] = true;
+    p.update(1 / 60, g);
+    expect(shaken).toBeGreaterThan(0);
+  });
+
   it('death resets weapons and respawns at center with invulnerability', () => {
     const g = stubContext();
     const p = g.player!;
@@ -63,5 +74,49 @@ describe('Player', () => {
     expect(p.gameOverTimer).toBe(1.8);
     p.update(2.0, g);
     expect(g.state).toBe(3);
+  });
+
+  it('max-level fire shoots continuously while held (no hold-and-release gate)', () => {
+    const g = stubContext();
+    const p = g.player!;
+    p.x = 240; p.y = 500;
+    p.weapons = [{ type: 0, lv: 5 }];
+    g.keys['Space'] = true;
+    // First tick fires immediately; the gun never goes quiet while held.
+    p.update(1 / 60, g);
+    expect(g.playerBullets.length).toBeGreaterThan(0);
+    const afterFirst = g.playerBullets.length;
+    // Advance past the fire-rate cooldown -> another volley, still holding.
+    for (let i = 0; i < 20; i++) p.update(1 / 60, g);
+    expect(g.playerBullets.length).toBeGreaterThan(afterFirst);
+  });
+
+  it('max-level charge auto-unleashes a super burst when the meter fills, without releasing', () => {
+    const g = stubContext();
+    const p = g.player!;
+    p.x = 240; p.y = 500;
+    p.weapons = [{ type: 0, lv: 5 }];
+    g.keys['Space'] = true;
+    // Hold long enough to fill the charge meter (CHARGE_DURATION = 1.0s).
+    for (let i = 0; i < 70; i++) p.update(1 / 60, g);
+    // The 12-bullet super volley (r 6, dmg 15) fired among the normal shots.
+    const superShots = g.playerBullets.filter(b => b.r === 6 && b.dmg === 15);
+    expect(superShots.length).toBe(12);
+    // Meter rolled over rather than latching full.
+    expect(p.chargeTime).toBeLessThan(1.0);
+  });
+
+  it('a maxed weapon in a non-zero combo slot still charges and super-fires', () => {
+    const g = stubContext();
+    const p = g.player!;
+    p.x = 240; p.y = 500;
+    // Slot 0 is a non-maxed missile; slot 1 is a maxed vulcan.
+    p.weapons = [{ type: 2, lv: 3 }, { type: 0, lv: 5 }];
+    g.keys['Space'] = true;
+    for (let i = 0; i < 70; i++) p.update(1 / 60, g);
+    // The vulcan super volley (12 bullets, r6 dmg15) fired despite slot 0 not being maxed.
+    const superShots = g.playerBullets.filter(b => b.r === 6 && b.dmg === 15);
+    expect(superShots.length).toBe(12);
+    expect(p.charging).toBe(true);
   });
 });

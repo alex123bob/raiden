@@ -47,20 +47,30 @@ export class Player extends Entity {
     p.y = Math.max(p.r, Math.min(H - p.r, p.y));
     p.shootTimer -= dt;
 
-    if (p.weapons[0].lv === 5) {
+    const maxedIdx = p.weapons.findIndex(s => s.lv === 5);
+    if (maxedIdx !== -1) {
+      // At least one weapon is maxed: fire continuously like every other
+      // level, while a super meter fills in the background and auto-unleashes
+      // a burst when full. No hold-and-release gate — the gun never goes quiet.
+      // In a combo, only the maxed slot(s) super-fire (see fireSuper); a
+      // non-maxed partner keeps its normal pattern via firePlayer.
+      const maxed = p.weapons[maxedIdx];
       if (ctx.keys['Space']) {
         p.charging = true;
-        p.chargeTime = Math.min(CHARGE_DURATION, p.chargeTime + dt);
-      } else if (p.charging) {
-        if (p.chargeTime >= CHARGE_DURATION) {
-          fireSuper(p, ctx);
-          p.shootTimer = 0.3;
-        } else if (p.shootTimer <= 0) {
-          p.shootTimer = getFireRate(p.weapons[0].type, p.weapons[0].lv);
+        if (p.shootTimer <= 0) {
+          p.shootTimer = getFireRate(maxed.type, maxed.lv);
           firePlayer(p, ctx);
         }
-        p.chargeTime = 0;
+        p.chargeTime += dt;
+        if (p.chargeTime >= CHARGE_DURATION) {
+          fireSuper(p, ctx);
+          ctx.spawnParticles('superFlash', p.x, p.y,
+            { color: WEAPON_COLORS[maxed.type] });
+          p.chargeTime -= CHARGE_DURATION;
+        }
+      } else {
         p.charging = false;
+        p.chargeTime = 0;
       }
       p.chargeFired = false;
     } else {
@@ -77,7 +87,7 @@ export class Player extends Entity {
       ctx.keys['_bombUsed'] = true;
       if (p.bombs > 0) {
         p.bombs--;
-        ctx.spawnParticles('bombFlash', 0, 0);
+        ctx.spawnParticles('bombFlash', p.x, p.y);
         ctx.audio.play('bomb');
         ctx.enemyBullets.length = 0;
         ctx.enemies.forEach(e => { e.hp -= 60; });
@@ -126,14 +136,15 @@ export class Player extends Entity {
 
     rc.restore();
 
-    if (p.weapons[0].lv === 5 && p.charging && p.chargeTime > 0) {
+    const ringSlot = p.weapons.find(s => s.lv === 5);
+    if (ringSlot && p.charging && p.chargeTime > 0) {
       const frac = Math.min(1, p.chargeTime / CHARGE_DURATION);
       const ringR = 28 + frac * 8;
       const startAngle = -Math.PI / 2;
       const endAngle = startAngle + frac * Math.PI * 2;
       rc.save();
       rc.translate(p.x, p.y);
-      const primaryColor = WEAPON_COLORS[p.weapons[0].type];
+      const primaryColor = WEAPON_COLORS[ringSlot.type];
       rc.shadowColor = primaryColor;
       rc.shadowBlur = 12 + frac * 16;
       rc.strokeStyle = primaryColor;

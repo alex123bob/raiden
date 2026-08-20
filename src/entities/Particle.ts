@@ -16,6 +16,7 @@ export class Particle extends Entity {
   life = 1.0;
   decay = 1.0;
   color = '#ff8800';
+  data: unknown = null;   // optional kind-specific state (e.g. precomputed geometry)
   constructor(public readonly def: ParticleKind, x: number, y: number) {
     super(x, y, 0);
   }

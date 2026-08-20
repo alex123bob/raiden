@@ -6,8 +6,8 @@ import { CanvasRenderer } from '../src/core/Renderer.js';
 import { noopCtx } from './dom-setup.js';
 
 describe('particle kinds', () => {
-  it('registers explosion and bombFlash', () => {
-    expect(PARTICLE_KINDS.all().map(k => k.key).sort()).toEqual(['bombFlash', 'explosion']);
+  it('registers explosion, bombFlash, and superFlash', () => {
+    expect(PARTICLE_KINDS.all().map(k => k.key).sort()).toEqual(['bombFlash', 'explosion', 'superFlash']);
   });
 
   it('spawnExplosion pushes the declared particle count and never throws', () => {

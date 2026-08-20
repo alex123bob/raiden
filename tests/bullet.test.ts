@@ -52,4 +52,31 @@ describe('bullet kinds', () => {
       expect(b.r).toBe(7);
     }
   });
+
+  it('fireSuper in a combo only fires the maxed slot(s)', () => {
+    const g = stubContext();
+    const p = g.player!;
+    p.x = 240; p.y = 500;
+    // Slot 0 not maxed (missile L3), slot 1 maxed (vulcan L5).
+    p.weapons = [{ type: 2, lv: 3 }, { type: 0, lv: 5 }];
+    fireSuper(p, g);
+    // Only the vulcan super (12 bullets, r6 dmg15) — the L3 missile sits out.
+    expect(g.playerBullets.length).toBe(12);
+    for (const b of g.playerBullets) {
+      expect(b.dmg).toBe(15);
+      expect(b.r).toBe(6);
+    }
+  });
+
+  it('fireSuper with both slots maxed fires both supers', () => {
+    const g = stubContext();
+    const p = g.player!;
+    p.x = 240; p.y = 500;
+    p.weapons = [{ type: 0, lv: 5 }, { type: 1, lv: 5 }];
+    fireSuper(p, g);
+    // 12 vulcan (r6/dmg15) + 16 spread (r7/dmg18).
+    expect(g.playerBullets.length).toBe(12 + 16);
+    expect(g.playerBullets.filter(b => b.r === 6 && b.dmg === 15).length).toBe(12);
+    expect(g.playerBullets.filter(b => b.r === 7 && b.dmg === 18).length).toBe(16);
+  });
 });

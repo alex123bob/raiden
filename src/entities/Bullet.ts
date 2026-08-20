@@ -171,6 +171,9 @@ function mkSpreadBullet(x: number, y: number, angle: number, lv: number): Bullet
 export function fireSuper(p: Player, ctx: GameContext): void {
   const total = p.weapons.length;
   p.weapons.forEach((slot, idx) => {
+    // Only maxed weapons unleash a super; a non-maxed combo slot keeps
+    // firing its normal pattern (via firePlayer) and sits this burst out.
+    if (slot.lv !== 5) return;
     const off = comboOffset(idx, total);
     const UP = -Math.PI / 2;
 

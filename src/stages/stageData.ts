@@ -107,7 +107,7 @@ export const STAGES = [
   // Stage 4
   {
     id: 4,
-    bg: { baseFill: '#051005', starColor: null, features: ['bubbles'] },
+    bg: { baseFill: '#051005', starColor: ['rgba(120,220,140,0.3)', 'rgba(150,240,170,0.5)', 'rgba(200,255,210,0.85)'], features: ['bubbles'] },
     waves: [
       { t: 2, type: 'turret', x: 100, y: 280 },
       { t: 2, type: 'turret', x: 240, y: 250 },
