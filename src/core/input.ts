@@ -74,7 +74,7 @@ const TC = {
 // side of the screen); the knob follows the thumb, and the ship moves in that
 // direction at a speed proportional to how far the knob is pushed (0..1).
 const STICK_R    = 56;                       // max knob travel from base
-const STICK_DEAD = 0.14;                     // deadzone (fraction of travel)
+const STICK_DEAD = 0.05;                     // deadzone (fraction of travel)
 const STICK_HOME = { x: 96, y: H - 108 };    // resting display position
 /** Live analog-stick touch state: `id` is the owning touch identifier (null = not held). */
 const stick: { id: number | null; bx: number; by: number; kx: number; ky: number } =
