@@ -4,6 +4,7 @@ import { vulcan } from './vulcan.js';
 import { spread } from './spread.js';
 import { missile } from './missile.js';
 import { enemyBullet } from './enemy.js';
+import { enemyMissile } from './enemyMissile.js';
 // Side-effect import: registers the boss BULLET_PATTERNS into their registry.
 import './patterns.js';
 
@@ -11,7 +12,8 @@ import './patterns.js';
 export const BULLET_KINDS = makeRegistry<BulletKind>();
 /** Convenience alias for BULLET_KINDS.register. */
 export const registerBulletKind = BULLET_KINDS.register;
-registerBulletKind(vulcan);      // player primary: fast straight rounds w/ trail
-registerBulletKind(spread);      // player shotgun-style fan
-registerBulletKind(missile);     // player homing missiles
-registerBulletKind(enemyBullet); // generic round used by all enemy/boss fire
+registerBulletKind(vulcan);       // player primary: fast straight rounds w/ trail
+registerBulletKind(spread);       // player shotgun-style fan
+registerBulletKind(missile);      // player homing missiles
+registerBulletKind(enemyBullet);  // generic round used by all enemy/boss fire
+registerBulletKind(enemyMissile); // homing round used by the seeker enemy

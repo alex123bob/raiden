@@ -13,14 +13,14 @@ describe('buildWaveTable', () => {
     }
   });
 
-  it('stage 1 has exactly 38 entries (5+2+4+3+1+6+1+3+2+2+8+boss)', () => {
+  it('stage 1 has exactly 46 entries (5+2+4+3+1+6+1+3+2+2+8+4+4+boss)', () => {
     const table = buildWaveTable(STAGES[0], 1.0);
-    expect(table.length).toBe(38);
+    expect(table.length).toBe(46);
   });
 
-  it('stage 8 has exactly 60 entries with all regular enemies elite', () => {
+  it('stage 8 has exactly 64 entries with all regular enemies elite', () => {
     const table = buildWaveTable(STAGES[7], 1.0);
-    expect(table.length).toBe(60);
+    expect(table.length).toBe(64);
     const regulars = table.filter(e => !e.boss);
     expect(regulars.length).toBeGreaterThan(0);
     expect(regulars.every(e => e.eliteHp === true)).toBe(true);

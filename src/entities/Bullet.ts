@@ -68,6 +68,7 @@ export class Bullet extends Entity {
         if (this.delay > 0) return;   // still delayed: stay put this frame
         this.delay = 0;
       }
+      this.def.onUpdate?.(this, dt, ctx);   // e.g. a homing enemy missile steers vx/vy
       this.x += this.vx * dt;
       this.y += this.vy * dt;
       // Despawn once off-screen (20px margin on all sides).
@@ -109,13 +110,15 @@ export function mkBullet(kindKey: 'vulcan' | 'spread' | 'missile', x: number, y:
 
 /**
  * Spawn an enemy bullet with an explicit velocity and push it into
- * ctx.enemyBullets. `r` is the radius (default 5) and `delay` (seconds) holds
- * it in place before it starts moving (for telegraphed patterns).
+ * ctx.enemyBullets. `r` is the radius (default 5), `delay` (seconds) holds
+ * it in place before it starts moving (for telegraphed patterns), and `kind`
+ * selects the BulletKind (default the generic 'enemy' round; pass e.g.
+ * 'enemyMissile' for a homing variant with an onUpdate steering hook).
  */
 export function spawnEnemyBullet(ctx: GameContext, x: number, y: number,
                                  vx: number, vy: number, clr: string,
-                                 r = 5, delay = 0): Bullet {
-  const b = new Bullet(BULLET_KINDS.get('enemy')!, x, y, vx, vy);
+                                 r = 5, delay = 0, kind = 'enemy'): Bullet {
+  const b = new Bullet(BULLET_KINDS.get(kind)!, x, y, vx, vy);
   b.r = r;
   b.clr = clr;
   b.delay = delay;
