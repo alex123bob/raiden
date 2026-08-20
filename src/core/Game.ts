@@ -3,7 +3,7 @@ import { ctx } from '../canvas.js';
 import type { GameContext } from './GameContext.js';
 import { CanvasRenderer, type RenderContext } from './Renderer.js';
 import { WebAudioBus, type AudioBus } from './audio.js';
-import { diffMultFor } from './difficulty.js';
+import { diffMultFor, densityForStage } from './difficulty.js';
 import { initBackground, updateStars, drawStars, updateBackground, drawBackground } from '../stages/background.js';
 import { updateParticles, drawParticles, spawnParticleKind } from '../entities/Particle.js';
 import { createPlayer, updatePlayer, drawPlayer } from '../entities/Player.js';
@@ -97,7 +97,7 @@ export class Game implements GameContext {
     this.currentStage = stage;
     this.diffMult = diffMultFor(stage, this.loopMult);
     initBackground(stage, this);
-    this.waveTable = buildWaveTable(STAGES[stage - 1], this.diffMult);
+    this.waveTable = buildWaveTable(STAGES[stage - 1], this.diffMult, densityForStage(stage));
     this.waveIndex = 0;
     this.stageTimer = 0;
     this.bossSpawned = false;

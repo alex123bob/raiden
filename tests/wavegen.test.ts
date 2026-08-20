@@ -34,4 +34,38 @@ describe('buildWaveTable', () => {
     const p1 = path(1);
     expect(p1.y - p0.y).toBeCloseTo(105 * 2.0);   // stage 1 formation factor 105
   });
+
+  it('density 1.0 leaves the baseline wave count unchanged', () => {
+    const base = buildWaveTable(STAGES[0], 1.0);
+    const same = buildWaveTable(STAGES[0], 1.0, 1.0);
+    expect(same.length).toBe(base.length);
+  });
+
+  it('density > 1 adds non-boss clones without duplicating the boss', () => {
+    const base = buildWaveTable(STAGES[0], 1.0, 1.0);
+    const dense = buildWaveTable(STAGES[0], 1.0, 1.4);
+    const baseRegulars = base.filter(e => !e.boss).length;
+    const denseRegulars = dense.filter(e => !e.boss).length;
+    // ~40% more regular spawns (fractional accumulator -> floor-ish count).
+    expect(denseRegulars).toBeGreaterThan(baseRegulars);
+    expect(denseRegulars).toBeLessThanOrEqual(Math.ceil(baseRegulars * 1.4) + 1);
+    // Exactly one boss trigger, still last, still stage 1.
+    expect(dense.filter(e => e.boss).length).toBe(1);
+    expect(dense[dense.length - 1].boss).toBe(1);
+  });
+
+  it('density clones stay time-sorted and land before the boss', () => {
+    const dense = buildWaveTable(STAGES[0], 1.0, 1.5);
+    const ts = dense.map(e => e.t);
+    expect(ts).toEqual([...ts].sort((a, b) => a - b));
+    const bossT = dense.find(e => e.boss)!.t;
+    expect(dense.filter(e => !e.boss).every(e => e.t < bossT)).toBe(true);
+  });
+
+  it('is deterministic — same inputs yield identical tables', () => {
+    const a = buildWaveTable(STAGES[2], 1.0, 1.4);
+    const b = buildWaveTable(STAGES[2], 1.0, 1.4);
+    expect(a.length).toBe(b.length);
+    expect(a.map(e => e.t)).toEqual(b.map(e => e.t));
+  });
 });

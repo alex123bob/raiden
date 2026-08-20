@@ -1,15 +1,26 @@
 import { W } from '../config.js';
 
+// ===========================================================================
+// STAGE CONTENT — hand-authored spawn timelines for all 18 stages.
+//
+// This file defines WHAT spawns and WHEN (the author's baseline, "density 1.0").
+// It does NOT control global scaling: enemy HP/speed/fire-rate curves and the
+// global enemy-DENSITY multiplier live in ../core/difficulty.ts. To make a
+// stage busier without editing waves, set GLOBAL_DENSITY / STAGE_DENSITY there;
+// buildWaveTable (waveGen.ts) applies it by cloning a fraction of these waves.
+//
 // Stage descriptor grammar (consumed by buildWaveTable in waveGen.js):
 //   waves entry forms:
 //     { t, type, path: ['down', sx, sy, spd] | ['sin', sx, sy, spd, amp, freq]
 //                        | ['form', cx, sy, spd, idx, total] }
+//       - t   is spawn time in seconds from stage start.
 //       - spd is the RAW speed factor; waveGen multiplies by diffMult.
 //     { t, type: 'turret', x, y }            stationary turret
 //     { t, boss: N }                  boss trigger (N = stage number)
 //     elite: true  ->  runtime eliteHp (1.5x hp), used on stage 8 and stages 15-18 regulars
 //   enemy type keys: 'fighter' | 'gunship' | 'bomber' | 'turret'
 //   bg.features vocabulary: rocks | clouds | bubbles | streaks | hulls | wisps | walls ([] = stars only)
+// ===========================================================================
 export const STAGES = [
   // Stage 1
   {

@@ -10,16 +10,33 @@ import { ENEMY_TYPES } from '../registries/enemies/index.js';
 import { Enemy } from './Enemy.js';
 import type { PhaseEntry } from '../registries/bosses/index.js';
 
+/**
+ * The stage-ending boss. Wraps a shared BossType `def` (its behavior: render,
+ * fire patterns, optional per-frame hook) with per-instance mutable state:
+ * position (via Entity), HP, drift target, phase, and fire/minion timers.
+ * Spawned once per stage by createBoss(); mirrors several live values onto the
+ * GameContext (bossPhase/bossTimer/bossAngle/bossMaxHp) for HUD and pattern use.
+ */
 export class Boss extends Entity {
+  /** 1-based stage number this boss belongs to; drives HP, death score, next-state. */
   stageNum: number;
+  /** Current hit points; reaches 0 -> onBossDeath. */
   hp: number;
+  /** Max hit points for this stage (from bossHpForStage); denominator for HP bar/phase. */
   maxHp: number;
+  /** Drift destination x in pixels [0..W]; boss eases toward it, then re-randomizes. */
   targetX: number;
+  /** Drift destination y in pixels [0..H]; kept near the top of the screen. */
   targetY: number;
+  /** Drift speed in pixels/second toward (targetX, targetY). */
   spd: number;
+  /** Countdown in seconds to the next fire(); reset to a phase-dependent interval after firing. */
   fireTimer: number;
+  /** Number of HP-banded difficulty phases for this stage (from phaseCountForStage). */
   phaseCount: number;
+  /** Countdown in seconds to the next minion spawn (only used when def.spawnMinions). */
   minionTimer: number;
+  /** Render opacity [0..1]; kind-specific hook may fade the boss (e.g. phantom). */
   phantomAlpha = 1.0;
   constructor(public readonly def: BossType, stage: number, ctx: GameContext) {
     super(W / 2, 130, def.r ?? 50);
