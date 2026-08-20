@@ -1,5 +1,11 @@
 import type { BossType } from './index.js';
 
+/**
+ * Viper — a green organic-looking boss with a radial-gradient body and four
+ * fang-like protrusions. All three phases fire the same jitter + aimBurst
+ * combo (a slow harassment shot plus a 3-way aimed spread); only the phase
+ * scaling changes.
+ */
 export const viper: BossType = {
   key: 'viper',
   tint: null,
@@ -13,11 +19,13 @@ export const viper: BossType = {
      { name: 'aimBurst', spdBase: 140, spdPhase: 25, offsets: [-0.22, 0, 0.22], clr: '#88cc00' }],
   ],
   render(c, b, angle) {
+    // Body: green radial gradient, bright center fading to near-black rim.
     const grad = c.createRadialGradient(0, 0, 4, 0, 0, b.r);
     grad.addColorStop(0, '#44aa44'); grad.addColorStop(0.6, '#226622'); grad.addColorStop(1, '#112211');
     c.fillStyle = grad;
     c.beginPath(); c.arc(0, 0, b.r, 0, Math.PI * 2); c.fill();
     c.strokeStyle = '#66ee44'; c.lineWidth = 2; c.stroke();
+    // Four fang-like protrusions, spinning at 0.4x the boss's spin angle.
     c.save(); c.rotate(angle * 0.4);
     for (let i = 0; i < 4; i++) {
       c.save(); c.rotate(i * Math.PI / 2);
@@ -29,6 +37,7 @@ export const viper: BossType = {
       c.restore();
     }
     c.restore();
+    // Yellow-green eye-like core.
     c.fillStyle = '#ccff00'; c.beginPath(); c.arc(0, 0, 12, 0, Math.PI * 2); c.fill();
     c.fillStyle = '#446600'; c.beginPath(); c.arc(0, 0,  6, 0, Math.PI * 2); c.fill();
   },

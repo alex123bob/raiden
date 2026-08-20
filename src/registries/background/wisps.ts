@@ -1,9 +1,15 @@
 import { W, H } from '../../config.js';
 import type { BgFeature } from '../../stages/background.js';
 
+/** One static curved light wisp: a cubic Bézier from (x1,y1) to (x2,y2) via control points (cx1,cy1)/(cx2,cy2), plus its stroke color/alpha/width. */
 interface Wisp { x1: number; y1: number; x2: number; y2: number; cx1: number; cy1: number;
   cx2: number; cy2: number; alpha: number; color: string; width: number; }
 
+/**
+ * Wisps — faint, static purple/violet curved light trails (used for
+ * void/nebula-themed stages). Unlike every other feature, wisps never move
+ * (update is a no-op) — they're fixed decorative curves drawn once per frame.
+ */
 export const wisps: BgFeature = {
   key: 'wisps',
   build(): Wisp[] {
@@ -20,7 +26,7 @@ export const wisps: BgFeature = {
     }
     return out;
   },
-  update() {},
+  update() {},   // static: wisps don't move once placed
   render(rc, state) {
     const wisps = state as Wisp[];
     wisps.forEach(w => {

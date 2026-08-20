@@ -38,9 +38,9 @@ export const BOSS_HP_STEP = 0.27;
 // cloned. This is the one knob to make the whole game busier or emptier
 // without touching wave data:
 //   1.0  = author's original spawn count
-//   1.4  = ~40% more enemies (current default — fills early-stage lulls)
+//   1.5  = ~40% more enemies (current default — fills early-stage lulls)
 //   2.0  = roughly double
-export const GLOBAL_DENSITY = 1.4;
+export const GLOBAL_DENSITY = 2;
 
 // Optional per-stage overrides, keyed by stage number (1-based). Any stage not
 // listed here uses GLOBAL_DENSITY. Use this to make a single stage denser or

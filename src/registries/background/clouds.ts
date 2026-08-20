@@ -1,8 +1,14 @@
 import { W, H } from '../../config.js';
 import type { BgFeature } from '../../stages/background.js';
 
+/** One soft cloud blob: position, ellipse size, opacity, fall speed, and a red-toned hue. */
 interface Cloud { x: number; y: number; w: number; h: number; alpha: number; spd: number; hue: string; }
 
+/**
+ * Clouds — soft, very translucent downward-drifting ellipse blobs (red-toned:
+ * used for the fiery/hazard-themed stage 3). 12 blobs, each slowly falling
+ * and wrapping to the top.
+ */
 export const clouds: BgFeature = {
   key: 'clouds',
   build(): Cloud[] {
@@ -19,7 +25,7 @@ export const clouds: BgFeature = {
     const clouds = state as Cloud[];
     clouds.forEach(c => {
       c.y += c.spd * dt;
-      if (c.y > H + c.h) { c.y = -c.h; c.x = Math.random()*W; }
+      if (c.y > H + c.h) { c.y = -c.h; c.x = Math.random()*W; }   // wrap to the top
     });
   },
   render(rc, state) {

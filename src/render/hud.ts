@@ -4,6 +4,12 @@ import { WEAPON_NAMES, WEAPON_COLORS } from '../entities/Bullet.js';
 import type { Game } from '../core/Game.js';
 
 // === HUD ===
+/**
+ * Draw the in-game HUD overlay: score/hi-score/stage (top row), lives and
+ * bombs as icon rows (bottom-left), and equipped weapon name+level per slot
+ * (bottom-right, stacked when 2 weapons are equipped). Drawn every frame
+ * while PLAYING, on top of the world layer (after any screen-shake restore).
+ */
 export function drawHUD(g: Game) {
   const p = g.player!;
   ctx.save();
@@ -23,7 +29,7 @@ export function drawHUD(g: Game) {
   ctx.fillStyle = '#999';
   ctx.font = '11px monospace';
   ctx.textAlign = 'center';
-  const loopStr = g.loopMult > 1 ? '  Loop ' + g.loopMult : '';
+  const loopStr = g.loopMult > 1 ? '  Loop ' + g.loopMult : '';   // only shown once looping (loopMult > 1)
   ctx.fillText('STAGE ' + g.currentStage + loopStr, W/2, 18);
 
   // Lives icons (bottom-left row)
@@ -36,7 +42,7 @@ export function drawHUD(g: Game) {
   ctx.fillStyle = '#ff88ff';
   for (let i = 0; i < p.bombs; i++) ctx.fillText('\u2605', 8 + i * 14, H - 24);
 
-  // Weapon name + level (bottom-right)
+  // Weapon name + level (bottom-right); stacked upward when 2 slots are equipped.
   ctx.textAlign = 'right';
   ctx.font = '12px monospace';
   const wSlots = p.weapons;

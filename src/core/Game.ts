@@ -23,47 +23,54 @@ import { drawHUD } from '../render/hud.js';
 import { drawTitle, drawPause, drawSettings, drawGameOver, drawStageClear, drawVictory } from '../render/screens.js';
 import { drawTouchControls } from './input.js';
 
+/** Optional constructor overrides for Game — lets tests inject a stub renderer/audio bus. */
 export interface GameDeps {
   renderer?: RenderContext;
   audio?: AudioBus;
 }
 
+/**
+ * The whole game: owns every mutable piece of state (player, enemies, boss,
+ * bullets, particles, powerups, stage/wave progress, score, screen-shake) and
+ * drives the single requestAnimationFrame loop that updates and draws them.
+ * Implements GameContext directly — `this` IS the `ctx`/`g` passed everywhere.
+ */
 export class Game implements GameContext {
-  state = STATE.TITLE;
-  settingsOpen = false;
-  soundOn = true;
-  gameSpeed = 1.0;
-  score = 0;
-  highScore = parseInt(localStorage.getItem('raidenHS') || '0');
-  keys: Record<string, boolean> = {};
-  moveVec = { x: 0, y: 0 };
-  player: Player | null = null;
-  enemies: Enemy[] = [];
-  boss: Boss | null = null;
+  state = STATE.TITLE;             // current STATE.* enum value
+  settingsOpen = false;            // true while the settings overlay is showing
+  soundOn = true;                  // mute toggle mirrored into `audio`
+  gameSpeed = 1.0;                 // global time multiplier from SPEED_STEPS (settings)
+  score = 0;                       // current run's score
+  highScore = parseInt(localStorage.getItem('raidenHS') || '0');   // persisted best score
+  keys: Record<string, boolean> = {};       // held-key map by KeyboardEvent.code
+  moveVec = { x: 0, y: 0 };                 // analog move input from the touch stick, each axis -1..1
+  player: Player | null = null;             // the ship, or null before spawn
+  enemies: Enemy[] = [];                    // live regular enemies
+  boss: Boss | null = null;                 // active boss, or null
   playerBullets: Bullet[] = [];
   enemyBullets: EnemyBullet[] = [];
   powerups: Powerup[] = [];
   particles: Particle[] = [];
-  diffMult = 1.0;
-  loopMult = 1;
-  waveTable: WaveEntry[] = [];
-  waveIndex = 0;
-  stageTimer = 0;
-  currentStage = 1;
-  bossSpawned = false;
-  bossMaxHp = 0;
-  bossPhase = 0;
-  bossTimer = 0;
-  bossAngle = 0;
-  stageClearTimer = 0;
-  victoryTimer = 0;
-  lastTime = 0;
-  shakeTime = 0;
-  shakeDur = 0;
-  shakeMag = 0;
-  readonly renderer: RenderContext;
-  readonly audio: AudioBus;
-  private loopFn: (ts: number) => void;
+  diffMult = 1.0;                  // per-stage speed/difficulty multiplier (see diffMultFor)
+  loopMult = 1;                    // 1-based loop count; increments each time the game is beaten and replayed
+  waveTable: WaveEntry[] = [];     // t-sorted spawn timeline for the current stage
+  waveIndex = 0;                   // index of the next unspawned waveTable entry
+  stageTimer = 0;                  // seconds elapsed since the current stage started
+  currentStage = 1;                // 1-based stage number currently being played
+  bossSpawned = false;             // true once this stage's boss trigger has fired
+  bossMaxHp = 0;                   // boss HP at spawn, for the HUD/boss health bar
+  bossPhase = 0;                   // boss attack-phase index (0-based)
+  bossTimer = 0;                   // seconds since the current boss fight started
+  bossAngle = 0;                   // boss spin/aim angle in radians, advances every frame
+  stageClearTimer = 0;             // countdown (s) during the STAGECLEAR interlude
+  victoryTimer = 0;                // countdown (s) used by the VICTORY sequence (currently unused by updateVictory)
+  lastTime = 0;                    // rAF timestamp (ms) of the previous frame, for computing dt
+  shakeTime = 0;                   // remaining seconds of the current screen shake (0 = none active)
+  shakeDur = 0;                    // total duration (s) of the current shake, for computing decay fraction
+  shakeMag = 0;                    // peak amplitude (px) of the current shake
+  readonly renderer: RenderContext;   // drawing surface (CanvasRenderer, or a test stub)
+  readonly audio: AudioBus;           // sound effect sink (WebAudioBus, or SilentBus in tests)
+  private loopFn: (ts: number) => void;   // bound loop() reference, so each rAF request reuses the same closure
 
   constructor(deps: GameDeps = {}) {
     this.renderer = deps.renderer ?? new CanvasRenderer(ctx);
@@ -72,11 +79,13 @@ export class Game implements GameContext {
     this.loopFn = (ts) => this.loop(ts);
   }
 
+  /** Flip the mute setting and propagate it to the audio bus. */
   toggleSound(): void {
     this.soundOn = !this.soundOn;
     this.audio.setEnabled(this.soundOn);
   }
 
+  /** Persist the current score as the new high score if it beats the stored one. */
   saveHS(): void {
     if (this.score > this.highScore) {
       this.highScore = this.score;
@@ -84,6 +93,7 @@ export class Game implements GameContext {
     }
   }
 
+  /** Reset for a brand-new run: fresh player/score, clear transient arrays, enter stage 1. */
   startGame(): void {
     this.score = 0;
     this.player = createPlayer();
@@ -93,6 +103,7 @@ export class Game implements GameContext {
     this.state = STATE.PLAYING;
   }
 
+  /** Reset per-stage state and begin stage `n` (1-based): rebuild difficulty, background, and wave table. */
   startStage(stage: number): void {
     this.currentStage = stage;
     this.diffMult = diffMultFor(stage, this.loopMult);
@@ -108,10 +119,12 @@ export class Game implements GameContext {
     this.powerups.length = 0;
   }
 
+  /** GameContext hook: spawn a particle-kind burst at (x,y); opts are kind-specific tuning. */
   spawnParticles(kind: string, x: number, y: number, opts?: Record<string, unknown>): void {
     spawnParticleKind(kind, x, y, opts ?? {}, this);
   }
 
+  /** GameContext hook: trigger/extend a screen shake. `mag` px amplitude, `dur` seconds. */
   shake(mag: number, dur: number): void {
     // Take the stronger/longer of any overlapping shakes rather than stacking.
     this.shakeMag = Math.max(this.shakeMag, mag);
@@ -119,6 +132,7 @@ export class Game implements GameContext {
     this.shakeTime = Math.max(this.shakeTime, dur);
   }
 
+  /** Count down the STAGECLEAR interlude; once it elapses, advance to the next stage. */
   updateStageClear(dt: number): void {
     this.stageClearTimer -= dt;
     if (this.stageClearTimer <= 0) {
@@ -129,11 +143,17 @@ export class Game implements GameContext {
 
   updateVictory(_dt: number): void { /* victory stays until Enter */ }
 
+  /**
+   * The single game loop: reschedules itself via requestAnimationFrame, computes
+   * dt, then runs update (world state) followed by draw (in fixed z-order:
+   * background → enemies/boss/bullets/powerups/player → particles → shake
+   * restore → HUD/overlays → touch controls). Called once per animation frame.
+   */
   loop(ts: number): void {
     requestAnimationFrame(this.loopFn);
-    const rawDt = Math.min((ts - this.lastTime) / 1000, 0.05);
+    const rawDt = Math.min((ts - this.lastTime) / 1000, 0.05);   // clamp dt so a tab-switch stall can't jump-cut the sim
     this.lastTime = ts;
-    const dt = rawDt * this.gameSpeed;
+    const dt = rawDt * this.gameSpeed;   // gameSpeed-scaled dt for gameplay; rawDt (below) drives shake decay
 
     // NOTE: background.ts is the BG_FEATURES registry module (Task 12).
     if (this.state !== STATE.PAUSED) updateStars(dt, this);
@@ -141,6 +161,7 @@ export class Game implements GameContext {
     if (this.state === STATE.PLAYING || this.state === STATE.STAGECLEAR) updateParticles(dt, this);
     if (this.state === STATE.STAGECLEAR) this.updateStageClear(dt);
     if (this.state === STATE.VICTORY) this.updateVictory(dt);
+    // Shake decays on real time (rawDt), not gameSpeed-scaled dt, so it isn't slowed by settings.
     if (this.shakeTime > 0) this.shakeTime = Math.max(0, this.shakeTime - rawDt);
     if (this.state === STATE.PLAYING) {
       updatePlayer(dt, this);
@@ -160,9 +181,9 @@ export class Game implements GameContext {
     // Screen shake: offset the whole world layer, restore before HUD/overlays.
     let shaking = false;
     if (this.shakeTime > 0 && this.shakeDur > 0) {
-      const k = (this.shakeTime / this.shakeDur) * this.shakeMag;
+      const k = (this.shakeTime / this.shakeDur) * this.shakeMag;   // linear decay of amplitude over the shake's life
       ctx.save();
-      ctx.translate((Math.random() - 0.5) * 2 * k, (Math.random() - 0.5) * 2 * k);
+      ctx.translate((Math.random() - 0.5) * 2 * k, (Math.random() - 0.5) * 2 * k);   // random jitter within +-k px
       shaking = true;
     }
 
@@ -185,12 +206,12 @@ export class Game implements GameContext {
       drawPlayerBullets(this.renderer, this);
       if (this.player) drawPlayer(this.player, this.renderer, this);
       drawParticles(this.renderer, this);
-      if (shaking) { ctx.restore(); shaking = false; }
+      if (shaking) { ctx.restore(); shaking = false; }   // stop shaking before HUD/overlays draw
       drawHUD(this);
       if (this.state === STATE.PAUSED)     drawPause(this);
       if (this.state === STATE.STAGECLEAR) drawStageClear(this);
     }
-    if (shaking) ctx.restore();
+    if (shaking) ctx.restore();   // safety net: restore if the shaking branch above wasn't reached (TITLE/GAMEOVER/VICTORY)
     if (this.settingsOpen) drawSettings(this);
     drawTouchControls(this);
   }

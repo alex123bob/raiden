@@ -1,9 +1,16 @@
 import { W, H } from '../../config.js';
 import type { BgFeature } from '../../stages/background.js';
 
+/** One rising bubble: position, radius, opacity, rise speed, and a sine-wobble (amplitude/freq/phase) for its horizontal drift. */
 interface Bubble { x: number; y: number; r: number; alpha: number; spd: number;
   wobbleAmp: number; wobbleFreq: number; wobbleOff: number; color: string; t: number; }
 
+/**
+ * Bubbles — the one background feature that scrolls UPWARD (used for the
+ * underwater stages), unlike every other feature which falls down. 40
+ * bubbles rise at varying speed while wobbling side to side, each with a
+ * small offset highlight for a glassy look.
+ */
 export const bubbles: BgFeature = {
   key: 'bubbles',
   build(): Bubble[] {
@@ -21,9 +28,9 @@ export const bubbles: BgFeature = {
   update(state, dt) {
     const bubbles = state as Bubble[];
     bubbles.forEach(b => {
-      b.t += dt; b.y -= b.spd * dt;
+      b.t += dt; b.y -= b.spd * dt;   // rises (y decreases), unlike every other feature
       b.x += Math.sin(b.t * b.wobbleFreq + b.wobbleOff) * b.wobbleAmp * dt;
-      if (b.y < -b.r*2) { b.y = H+b.r*2; b.x = Math.random()*W; }
+      if (b.y < -b.r*2) { b.y = H+b.r*2; b.x = Math.random()*W; }   // wrap to the bottom
     });
   },
   render(rc, state) {
@@ -31,6 +38,7 @@ export const bubbles: BgFeature = {
     bubbles.forEach(b => {
       rc.save(); rc.globalAlpha = b.alpha; rc.fillStyle = b.color;
       rc.beginPath(); rc.arc(b.x, b.y, b.r, 0, Math.PI*2); rc.fill();
+      // Small offset highlight, half as opaque as the fill, for a glassy sheen.
       rc.globalAlpha = b.alpha * 0.5; rc.fillStyle = '#ccffcc';
       rc.beginPath(); rc.arc(b.x-b.r*0.3, b.y-b.r*0.3, b.r*0.4, 0, Math.PI*2); rc.fill();
       rc.restore();

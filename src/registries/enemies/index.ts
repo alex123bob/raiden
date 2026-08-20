@@ -5,9 +5,11 @@ import { gunship } from './gunship.js';
 import { bomber } from './bomber.js';
 import { turret } from './turret.js';
 
+/** Registry of every enemy kind, keyed by EnemyType.key. */
 export const ENEMY_TYPES = makeRegistry<EnemyType>();
+/** Convenience alias for ENEMY_TYPES.register. */
 export const registerEnemyType = ENEMY_TYPES.register;
-registerEnemyType(fighter);
-registerEnemyType(gunship);
-registerEnemyType(bomber);
-registerEnemyType(turret);
+registerEnemyType(fighter);   // fast, cheap, aimed single shot
+registerEnemyType(gunship);   // tougher, 3-way aimed spread
+registerEnemyType(bomber);    // slow tank, wide downward fan
+registerEnemyType(turret);    // stationary, only fires when player is in range

@@ -4,6 +4,7 @@ import { isTouch } from '../core/input.js';
 import type { Game } from '../core/Game.js';
 
 // === SCREENS ===
+/** Title screen: glowing "RAIDEN" logo, blinking start prompt, hi-score, and input hints (keyboard vs touch). */
 export function drawTitle(g: Game) {
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
   ctx.fillRect(0, 0, W, H);
@@ -23,13 +24,14 @@ export function drawTitle(g: Game) {
 
   ctx.fillStyle = '#ffff44';
   ctx.font = '16px monospace';
-  if (Math.floor(Date.now() / 500) % 2)
+  if (Math.floor(Date.now() / 500) % 2)   // blinks on/off every 0.5s
     ctx.fillText('PRESS ENTER TO START', W/2, 340);
 
   ctx.fillStyle = '#aaaaaa';
   ctx.font = '13px monospace';
   ctx.fillText('HI-SCORE: ' + g.highScore, W/2, 390);
 
+  // Control hints differ by input method.
   ctx.fillStyle = '#888';
   ctx.font = '11px monospace';
   if (isTouch) {
@@ -41,6 +43,7 @@ export function drawTitle(g: Game) {
   }
 }
 
+/** Pause overlay: dim scrim plus "PAUSED" and the resume hint. Drawn on top of the frozen world layer. */
 export function drawPause(g: Game) {
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   ctx.fillRect(0, 0, W, H);
@@ -53,7 +56,9 @@ export function drawPause(g: Game) {
   ctx.fillText('P to resume', W/2, H/2 + 24);
 }
 
+/** Settings panel: a centered box showing sound toggle and speed setting, with key hints. */
 export function drawSettings(g: Game) {
+  // Panel geometry (touch input.ts's touchDiscrete hit-tests mirror these bands).
   const bx = W/2 - 130, by = H/2 - 90, bw = 260, bh = 185;
   ctx.fillStyle = 'rgba(0,10,30,0.94)';
   ctx.fillRect(bx, by, bw, bh);
@@ -77,6 +82,7 @@ export function drawSettings(g: Game) {
   ctx.fillText('S to close', W/2, by + 150);
 }
 
+/** Game-over screen: dark scrim, "GAME OVER", final score/hi-score, and the continue/share hint. */
 export function drawGameOver(g: Game) {
   ctx.fillStyle = 'rgba(0,0,0,0.82)';
   ctx.fillRect(0, 0, W, H);
@@ -93,6 +99,7 @@ export function drawGameOver(g: Game) {
   ctx.fillText('ENTER → title    C → copy score', W/2, 405);
 }
 
+/** Stage-clear interlude: glowing "STAGE CLEAR!" banner plus the next-stage countdown message. */
 export function drawStageClear(g: Game) {
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(0, 0, W, H);
@@ -109,6 +116,7 @@ export function drawStageClear(g: Game) {
   ctx.fillText('STAGE ' + (g.currentStage + 1) + ' INCOMING...', W/2, H/2 + 30);
 }
 
+/** Victory screen (beating the final stage on loop 1): glowing "MISSION COMPLETE", final score, and a blinking continue prompt. */
 export function drawVictory(g: Game) {
   ctx.fillStyle = 'rgba(0,0,0,0.85)';
   ctx.fillRect(0, 0, W, H);
@@ -127,6 +135,6 @@ export function drawVictory(g: Game) {
   ctx.fillText('HI-SCORE: ' + g.highScore, W/2, H/2 + 58);
   ctx.fillStyle = '#ffff44';
   ctx.font = '14px monospace';
-  if (Math.floor(Date.now() / 500) % 2)
+  if (Math.floor(Date.now() / 500) % 2)   // blinks on/off every 0.5s
     ctx.fillText('PRESS ENTER', W/2, H/2 + 100);
 }

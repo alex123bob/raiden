@@ -1,5 +1,6 @@
 import type { PowerupType } from '../../entities/Powerup.js';
 
+/** Bomb pickup — a pink disc labeled 'B'; grants one extra bomb, capped at 3. */
 export const bomb: PowerupType = {
   key: 'bomb',
   render(rc, pw) {

@@ -2,6 +2,11 @@ import { type Enemy, type EnemyType } from '../../entities/Enemy.js';
 import { spawnEnemyBullet } from '../../entities/Bullet.js';
 import { movePathOrDown } from './shared.js';
 
+/**
+ * Gunship — a mid-tier enemy: tougher and slower than a fighter. Diamond-ish
+ * olive hull with a yellow gun port. Fires a 3-way aimed spread. Opts into
+ * extraStreams like fighter.
+ */
 export const gunship: EnemyType = {
   key: 'gunship',
   hp: 8, r: 14, spd: 65, score: 200, dropChance: 0.25, color: '#aacc44',
@@ -16,6 +21,7 @@ export const gunship: EnemyType = {
     rc.beginPath(); rc.arc(0, 2, 5, 0, Math.PI * 2); rc.fill();
   },
   fire(e, ctx) {
+    // Three bullets fanned +-0.28 rad around the aimed direction.
     const dx = ctx.player!.x - e.x, dy = ctx.player!.y - e.y;
     const spd = 190 * ctx.diffMult;
     [-0.28, 0, 0.28].forEach(a => {

@@ -5,9 +5,16 @@ import type { Game } from './Game.js';
 
 // === INPUT ===
 
+/** True on touch/coarse-pointer devices; gates whether on-screen touch controls render/handle input. */
 export const isTouch = typeof window !== 'undefined' && (('ontouchstart' in window) ||
                        (window.matchMedia && window.matchMedia('(pointer: coarse)').matches));
 
+/**
+ * One-shot key-press actions (menus, pause, settings, speed cycling, start/
+ * restart, clipboard share). Called only on the keydown transition (not while
+ * held) — see the debounce in initInput's keydown listener. Also invoked
+ * synthetically by touch controls tapping the equivalent on-screen button.
+ */
 function handleKeyPress(g: Game, code: string) {
   if (g.settingsOpen) {
     if (code === 'KeyM') {
@@ -44,6 +51,7 @@ function handleKeyPress(g: Game, code: string) {
   }
 }
 
+/** Move g.gameSpeed one step up/down through SPEED_STEPS (clamped to the array bounds). */
 function cycleSpeed(g: Game, dir: number) {
   let i = SPEED_STEPS.indexOf(g.gameSpeed);
   i = Math.max(0, Math.min(SPEED_STEPS.length - 1, i + dir));
@@ -55,6 +63,7 @@ function cycleSpeed(g: Game, dir: number) {
 // game logic below is untouched. Controls render/handle only on touch devices.
 
 // Control geometry, in game coordinates (480x640).
+/** Fixed screen-space hit circles for the on-screen touch buttons (fire/bomb/pause/gear). */
 const TC = {
   fire:  { x: W - 66, y: H - 86, r: 48 },
   bomb:  { x: W - 66, y: H - 176, r: 34 },
@@ -67,12 +76,14 @@ const TC = {
 const STICK_R    = 56;                       // max knob travel from base
 const STICK_DEAD = 0.14;                     // deadzone (fraction of travel)
 const STICK_HOME = { x: 96, y: H - 108 };    // resting display position
+/** Live analog-stick touch state: `id` is the owning touch identifier (null = not held). */
 const stick: { id: number | null; bx: number; by: number; kx: number; ky: number } =
   { id: null, bx: 0, by: 0, kx: 0, ky: 0 };
 const roles: Record<string, 'fire' | 'bomb'> = {};    // touch identifier -> 'fire' | 'bomb'
 let firePressed = false;                     // glow flags for drawing
 let bombPressed = false;
 
+/** Convert a raw Touch's page coordinates into game/canvas coordinates (0..W, 0..H). */
 function toCanvas(t: Touch) {
   const rect = canvas.getBoundingClientRect();
   return {
@@ -80,6 +91,7 @@ function toCanvas(t: Touch) {
     y: (t.clientY - rect.top)  / rect.height * H,
   };
 }
+/** True if point `p` falls inside circle `c` (used for button hit-testing). */
 function within(p: { x: number; y: number }, c: { x: number; y: number; r: number }) {
   const dx = p.x - c.x, dy = p.y - c.y;
   return dx * dx + dy * dy <= c.r * c.r;
@@ -87,12 +99,18 @@ function within(p: { x: number; y: number }, c: { x: number; y: number; r: numbe
 
 // Discrete (one-per-press) actions for a freshly-started touch.
 // Returns true if the touch was consumed (should not drive movement/fire).
+/**
+ * Handle a touch that just started (touchstart), for menu/button taps that
+ * fire once rather than being held. Returns true if the touch was consumed
+ * (so the caller won't also treat it as a movement-stick or fire/bomb grab).
+ */
 function touchDiscrete(p: { x: number; y: number }, g: Game) {
   if (g.settingsOpen) {
+    // Hand-tuned hit bands matching the settings panel's drawn layout (see screens.ts drawSettings).
     const bx = W/2 - 130, by = H/2 - 90, bw = 260, bh = 185;
     if (p.y > by + 55 && p.y < by + 80) { handleKeyPress(g, 'KeyM'); return true; }
     if (p.y > by + 80 && p.y < by + 105) { cycleSpeed(g, p.x < W/2 ? -1 : 1); return true; }
-    if (p.x < bx || p.x > bx + bw || p.y < by || p.y > by + bh) g.settingsOpen = false;
+    if (p.x < bx || p.x > bx + bw || p.y < by || p.y > by + bh) g.settingsOpen = false;   // tap outside closes it
     return true;  // swallow all taps while settings is open
   }
   if (within(p, TC.gear) &&
@@ -105,7 +123,7 @@ function touchDiscrete(p: { x: number; y: number }, g: Game) {
     return true;
   }
   if (g.state === STATE.TITLE || g.state === STATE.GAMEOVER || g.state === STATE.VICTORY) {
-    handleKeyPress(g, 'Enter');
+    handleKeyPress(g, 'Enter');   // tap anywhere to start/restart/continue
     return true;
   }
   return false;
@@ -116,9 +134,9 @@ function recomputeMoveVec(g: Game) {
   if (stick.id === null) { g.moveVec.x = 0; g.moveVec.y = 0; return; }
   let dx = stick.kx - stick.bx, dy = stick.ky - stick.by;
   const len = Math.hypot(dx, dy);
-  if (len > STICK_R) { dx = dx / len * STICK_R; dy = dy / len * STICK_R; }
+  if (len > STICK_R) { dx = dx / len * STICK_R; dy = dy / len * STICK_R; }   // clamp knob to the stick's radius
   const mag = len / STICK_R;                 // 0..1
-  if (mag < STICK_DEAD) { g.moveVec.x = 0; g.moveVec.y = 0; return; }
+  if (mag < STICK_DEAD) { g.moveVec.x = 0; g.moveVec.y = 0; return; }        // inside deadzone: no movement
   g.moveVec.x = dx / STICK_R;
   g.moveVec.y = dy / STICK_R;
 }
@@ -134,9 +152,15 @@ function recomputeButtons(g: Game) {
   g.keys['KeyB']  = bombPressed;               // _bombUsed latch makes bomb one-shot
 }
 
+/**
+ * Wire up all input for the game: keyboard listeners always, plus touch
+ * listeners (movement stick + fire/bomb/pause/gear buttons) when isTouch.
+ * Call once at startup.
+ */
 export function initInput(g: Game) {
   document.addEventListener('keydown', e => {
     if (!g.keys[e.code]) {
+      // Only fire handleKeyPress on the down-transition, not on OS auto-repeat.
       g.keys[e.code] = true;
       handleKeyPress(g, e.code);
     }
@@ -177,8 +201,8 @@ export function initInput(g: Game) {
     const endTouch = (e: TouchEvent) => {
       e.preventDefault();
       for (const t of Array.from(e.changedTouches)) {
-        if (t.identifier === stick.id) stick.id = null;
-        delete roles[t.identifier];
+        if (t.identifier === stick.id) stick.id = null;   // release the movement stick
+        delete roles[t.identifier];                       // release fire/bomb if this touch held one
       }
       recomputeButtons(g);
       recomputeMoveVec(g);
@@ -188,6 +212,7 @@ export function initInput(g: Game) {
   }
 }
 
+/** Draw one round touch button: filled/stroked circle plus a centered label. */
 function drawTcBtn(c: { x: number; y: number; r: number }, stroke: string, label: string, fontPx?: number) {
   ctx.strokeStyle = stroke;
   ctx.fillStyle = 'rgba(20,30,50,0.38)';
@@ -197,6 +222,11 @@ function drawTcBtn(c: { x: number; y: number; r: number }, stroke: string, label
   ctx.fillText(label, c.x, c.y);
 }
 
+/**
+ * Draw the on-screen touch controls (movement stick, fire/bomb/pause/gear
+ * buttons, and the "tap to start" hint) for the current game state. No-op on
+ * non-touch devices.
+ */
 export function drawTouchControls(g: Game) {
   if (!isTouch) return;
   ctx.save();
