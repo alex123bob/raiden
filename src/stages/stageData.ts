@@ -17,6 +17,7 @@ import { W } from '../config.js';
 //       - spd is the RAW speed factor; waveGen multiplies by diffMult.
 //     { t, type: 'turret', x, y }            stationary turret
 //     { t, boss: N }                  boss trigger (N = stage number)
+//     { t, powerup: 'life', x, y }    scripted extra-life pickup (sparse; never enemy-dropped)
 //     elite: true  ->  runtime eliteHp (1.5x hp), used on stage 8 and stages 15-18 regulars
 //   enemy type keys: 'fighter' | 'gunship' | 'bomber' | 'turret' | 'swarmer' | 'dropship' | 'seeker'
 //   bg.features vocabulary: rocks | clouds | bubbles | streaks | hulls | wisps | walls ([] = stars only)
@@ -108,6 +109,7 @@ export const STAGES = [
       { t: 10, type: 'turret', x: 120, y: 260 },
       { t: 10, type: 'turret', x: 240, y: 220 },
       { t: 10, type: 'turret', x: 360, y: 260 },
+      { t: 13, powerup: 'life', x: W/2, y: -20 },
       ...[0,1,2,3,4,5,6,7].map(i => ({ t: 17 + i*0.15, type: 'fighter', path: ['form', W/2, -20, 192, i, 8] })),
       { t: 25, boss: 3 },
     ],
@@ -209,6 +211,7 @@ export const STAGES = [
       { t: 12.5, type: 'bomber', path: ['down', W*0.7, -40, 40] },
       ...[0,1,2,3,4].map(i => ({ t: 9 + i*0.25, type: 'fighter', path: ['form', W/2, -20, 130, i, 5] })),
       ...[0,1,2].map(i => ({ t: 13 + i*0.5, type: 'gunship', path: ['sin', W*0.35, -30, 90, 45, 1.5] })),
+      { t: 16, powerup: 'life', x: W/2, y: -20 },
       { t: 17, type: 'bomber', path: ['down', W*0.5, -40, 38] },
       { t: 19, type: 'dropship', path: ['down', W*0.3, -30, 32] },
       { t: 19.5, type: 'dropship', path: ['down', W*0.7, -30, 32] },
@@ -340,6 +343,7 @@ export const STAGES = [
       { t: 16, type: 'turret', x: 80,  y: 240 },
       { t: 16, type: 'turret', x: 240, y: 200 },
       { t: 16, type: 'turret', x: 400, y: 240 },
+      { t: 18, powerup: 'life', x: W/2, y: -20 },
       { t: 19, type: 'bomber', path: ['down', W*0.33, -40, 48] },
       { t: 19, type: 'bomber', path: ['down', W*0.67, -40, 48] },
       { t: 21, type: 'seeker', path: ['down', W*0.5, -30, 85] },
@@ -446,6 +450,7 @@ export const STAGES = [
       ...[0,1,2,3].map(i => ({ t: 4 + i*0.4, type: 'gunship', path: ['down', W*0.25, -30, 120] })),
       ...[0,1,2,3].map(i => ({ t: 4 + i*0.4, type: 'gunship', path: ['down', W*0.75, -30, 120] })),
       { t: 8, type: 'bomber', path: ['down', W*0.5, -40, 58] },
+      { t: 9, powerup: 'life', x: W/2, y: -20 },
       ...[0,1,2,3,4,5,6,7].map(i => ({ t: 10 + i*0.11, type: 'fighter', path: ['sin', W*0.1 + i*55, -20, 205, 42, 2.0] })),
       { t: 13, type: 'turret', x: 100, y: 240 },
       { t: 13, type: 'turret', x: 240, y: 200 },
@@ -569,6 +574,7 @@ export const STAGES = [
       ...[0,1,2,3].map(i => ({ t: 4 + i*0.35, type: 'gunship', path: ['down', W*0.8, -30, 128] })),
       ...[0,1,2,3,4,5,6,7].map(i => ({ t: 7 + i*0.10, type: 'fighter', path: ['sin', W*0.1 + i*55, -20, 220, 42, 2.2] })),
       { t: 10, type: 'bomber', path: ['down', W*0.5, -40, 64] },
+      { t: 11, powerup: 'life', x: W/2, y: -20 },
       { t: 12, type: 'dropship', path: ['down', W*0.25, -30, 42], elite: true },
       { t: 12, type: 'seeker', path: ['down', W*0.75, -30, 85], elite: true },
       ...[0,1,2,3,4,5].map(i => ({ t: 13 + i*0.18, type: 'fighter', path: ['form', W/2, -20, 245, i, 6] })),
@@ -704,6 +710,7 @@ export const STAGES = [
       ...[0,1,2,3].map(i => ({ t: 4 + i*0.3, type: 'gunship', path: ['down', W*0.8, -30, 135] })),
       ...[0,1,2,3,4,5,6,7].map(i => ({ t: 7 + i*0.10, type: 'fighter', path: ['sin', W*0.1 + i*55, -20, 235, 44, 2.2] })),
       { t: 10, type: 'bomber', path: ['down', W*0.5, -40, 70] },
+      { t: 11, powerup: 'life', x: W/2, y: -20 },
       { t: 12, type: 'dropship', path: ['down', W*0.25, -30, 48], elite: true },
       { t: 12, type: 'dropship', path: ['down', W*0.75, -30, 48], elite: true },
       ...[0,1,2,3,4,5].map(i => ({ t: 13 + i*0.16, type: 'fighter', path: ['form', W/2, -20, 260, i, 6] })),

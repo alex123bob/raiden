@@ -1,6 +1,8 @@
 import { Enemy, type PathFn } from '../entities/Enemy.js';
+import { Powerup } from '../entities/Powerup.js';
 import { createBoss } from '../entities/Boss.js';
 import { ENEMY_TYPES } from '../registries/enemies/index.js';
+import { POWERUP_TYPES } from '../registries/powerups/index.js';
 import type { GameContext } from '../core/GameContext.js';
 
 // ===========================================================================
@@ -39,14 +41,14 @@ registerMotion('form', (desc, diffMult) => pathFormation(desc[0], desc[1], desc[
 
 /**
  * A single spawn instruction as authored in stageData.ts (density 1.0 baseline).
- * Exactly one of `boss` / `type` is meaningful per entry.
+ * Exactly one of `boss` / `type` / `powerup` is meaningful per entry.
  */
 interface WaveDescriptor {
   /** Spawn time in seconds from stage start. */
   t: number;
   /** If set, this entry triggers the boss for stage N (clears remaining enemies). */
   boss?: number;
-  /** Enemy type key: 'fighter' | 'gunship' | 'bomber' | 'turret'. */
+  /** Enemy type key: 'fighter' | 'gunship' | 'bomber' | 'turret' | 'swarmer' | 'dropship' | 'seeker'. */
   type?: string;
   /** Turret X position (turret entries only). */
   x?: number;
@@ -56,6 +58,8 @@ interface WaveDescriptor {
   path?: (string | number)[];
   /** Grants +50% HP at runtime; used on stage 8 and 15-18 regulars. */
   elite?: boolean;
+  /** Powerup type key ('life') for a directly-scripted pickup at (x, y); never an enemy. */
+  powerup?: string;
 }
 
 function expandPath(desc: (string | number)[], diffMult: number): PathFn {
@@ -79,6 +83,7 @@ export interface WaveEntry {
   y?: number;
   path?: PathFn | null;
   eliteHp?: boolean;
+  powerup?: string;
 }
 
 // Horizontal nudge (px) applied to a density clone so it reads as a separate
@@ -135,7 +140,7 @@ export function buildWaveTable(stageDef: { waves: WaveDescriptor[] }, diffMult: 
     // accumulator (deterministic — no RNG, so wave tables stay reproducible).
     let acc = 0;
     for (const d of stageDef.waves) {
-      if (d.boss) continue;              // never duplicate the boss
+      if (d.boss || d.powerup) continue;  // never duplicate the boss or a scripted powerup
       acc += extraFraction;
       if (acc >= 1) {
         acc -= 1;
@@ -148,6 +153,8 @@ export function buildWaveTable(stageDef: { waves: WaveDescriptor[] }, diffMult: 
   for (const d of descriptors) {
     if (d.boss) {
       entries.push({ t: d.t, boss: d.boss });
+    } else if (d.powerup) {
+      entries.push({ t: d.t, powerup: d.powerup, x: d.x, y: d.y });
     } else if (d.type === 'turret') {
       entries.push({ t: d.t, type: d.type, x: d.x, y: d.y, ...(d.elite ? { eliteHp: true } : {}) });
     } else {
@@ -177,6 +184,9 @@ export function updateWaves(dt: number, ctx: GameContext): void {
       ctx.enemyBullets.length = 0;
       ctx.boss = createBoss(ctx);
       ctx.bossSpawned = true;
+    } else if (entry.powerup) {
+      const def = POWERUP_TYPES.get(entry.powerup)!;
+      ctx.powerups.push(new Powerup(def, entry.x ?? 0, entry.y ?? 0));
     } else if (entry.type === 'turret') {
       const e = new Enemy(ENEMY_TYPES.get('turret')!, entry.x ?? 0, entry.y ?? 0, null, ctx);
       if (entry.eliteHp) e.hp = Math.ceil(e.hp * 1.5);
