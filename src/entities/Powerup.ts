@@ -30,6 +30,8 @@ export class Powerup extends Entity {
   life = 9.0;
   /** Weapon type index (0=vulcan,1=spread,2=missile) this grants; meaningless for non-weapon kinds. */
   wType = 0;
+  /** Random per-instance angle offset so simultaneously-spawned pickups don't shimmer in lockstep. */
+  spawnPhase = Math.random() * Math.PI * 2;
   constructor(public readonly def: PowerupType, x: number, y: number, wType?: number) {
     super(x, y, 14);
     this.wType = wType ?? 0;
@@ -42,12 +44,59 @@ export class Powerup extends Entity {
   draw(rc: RenderContext, _ctx: GameContext): void {
     rc.save();
     rc.translate(this.x, this.y);
+    drawShine(rc, this);
     this.def.render(rc, this);
     rc.restore();
   }
   /** Apply this powerup's effect (delegates to its PowerupType.apply). */
   apply(ctx: GameContext): void {
     this.def.apply(this, ctx);
+  }
+}
+
+/**
+ * Shared "this is a pickup, not a threat" treatment drawn behind every
+ * powerup type: a soft breathing gold halo plus a few orbiting twinkle
+ * sparkles. Driven by `age` (time since spawn, smooth and monotonic unlike
+ * the despawn countdown `life`) so the shimmer never stutters near despawn.
+ */
+function drawShine(rc: RenderContext, pw: Powerup): void {
+  const age = 9.0 - pw.life;
+  const haloPulse = 0.5 + Math.sin(age * 3.2) * 0.5;   // 0..1 breathing pulse
+  const haloR = pw.r * (2.0 + haloPulse * 0.6);
+
+  rc.save();
+  const grad = rc.createRadialGradient(0, 0, pw.r * 0.4, 0, 0, haloR);
+  grad.addColorStop(0, `rgba(255,246,190,${0.35 + haloPulse * 0.25})`);
+  grad.addColorStop(1, 'rgba(255,246,190,0)');
+  rc.fillStyle = grad;
+  rc.beginPath(); rc.arc(0, 0, haloR, 0, Math.PI * 2); rc.fill();
+  rc.restore();
+
+  const sparkleCount = 4;
+  for (let i = 0; i < sparkleCount; i++) {
+    const twinkle = Math.sin(age * 5 + i * 1.9 + pw.spawnPhase) * 0.5 + 0.5;   // 0..1, offset per sparkle
+    if (twinkle < 0.15) continue;   // let sparkles fully vanish rather than dimly linger
+    const orbitAngle = pw.spawnPhase + i * (Math.PI * 2 / sparkleCount) + age * 1.1;
+    const orbitR = pw.r * 1.7;
+    const sx = Math.cos(orbitAngle) * orbitR;
+    const sy = Math.sin(orbitAngle) * orbitR;
+    const s = pw.r * 0.22 * twinkle;
+    rc.save();
+    rc.translate(sx, sy);
+    rc.rotate(orbitAngle);
+    rc.fillStyle = `rgba(255,255,255,${twinkle})`;
+    rc.shadowColor = '#fff6c0';
+    rc.shadowBlur = 6;
+    // Four-point sparkle: a tall diamond crossed with a wide one.
+    rc.beginPath();
+    rc.moveTo(0, -s); rc.lineTo(s * 0.3, 0); rc.lineTo(0, s); rc.lineTo(-s * 0.3, 0); rc.closePath();
+    rc.fill();
+    rc.beginPath();
+    rc.moveTo(-s * 1.6, 0); rc.lineTo(0, -s * 0.3); rc.lineTo(s * 1.6, 0); rc.lineTo(0, s * 0.3); rc.closePath();
+    rc.fill();
+    rc.shadowBlur = 0; rc.shadowColor = 'transparent';
+    rc.restore();
   }
 }
 
