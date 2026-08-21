@@ -3,6 +3,7 @@ import { ctx } from '../canvas.js';
 import type { GameContext } from './GameContext.js';
 import { CanvasRenderer, type RenderContext } from './Renderer.js';
 import { WebAudioBus, type AudioBus } from './audio.js';
+import { isTouch } from './input.js';
 import { diffMultFor, densityForStage } from './difficulty.js';
 import { initBackground, updateStars, drawStars, updateBackground, drawBackground } from '../stages/background.js';
 import { updateParticles, drawParticles, spawnParticleKind } from '../entities/Particle.js';
@@ -130,6 +131,11 @@ export class Game implements GameContext {
     this.shakeMag = Math.max(this.shakeMag, mag);
     this.shakeDur = Math.max(this.shakeDur, dur);
     this.shakeTime = Math.max(this.shakeTime, dur);
+  }
+
+  /** GameContext hook: haptic buzz on touch devices that support the Vibration API. */
+  vibrate(ms: number): void {
+    if (isTouch && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(ms);
   }
 
   /** Count down the STAGECLEAR interlude; once it elapses, advance to the next stage. */

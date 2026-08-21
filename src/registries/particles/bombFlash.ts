@@ -17,7 +17,7 @@ const DUR = 0.85;   // total lifetime in seconds (life 1 -> 0 at decay 1/DUR)
  */
 function buildCracks(ox: number, oy: number): Crack[] {
   const maxReach = Math.hypot(W, H);   // longest a crack could need to span the screen
-  const count = 11;
+  const count = 22;
   const cracks: Crack[] = [];
   for (let i = 0; i < count; i++) {
     const baseAngle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;   // evenly spaced + jitter
@@ -47,7 +47,7 @@ function buildCracks(ox: number, oy: number): Crack[] {
       }
       forks.push(fpts);
     }
-    cracks.push({ pts, forks, width: 1.5 + Math.random() * 2.5 });
+    cracks.push({ pts, forks, width: 0.7 + Math.random() * 1.3 });
   }
   return cracks;
 }
@@ -57,7 +57,7 @@ function buildCracks(ox: number, oy: number): Crack[] {
  * bomb. A single long-lived (DUR=0.85s) particle drives three overlapping
  * phases via its `life`/`decay`: (1) a blinding full-screen white/gold flash
  * over the first ~35%, (2) an expanding golden shockwave ring out to ~55%,
- * and (3) 11 jagged cracks (with forks) that draw in progressively, hold,
+ * and (3) 22 jagged cracks (with forks) that draw in progressively, hold,
  * then fade over the final 30%. Also triggers a screen shake on spawn.
  */
 export const bombFlash: ParticleKind = {

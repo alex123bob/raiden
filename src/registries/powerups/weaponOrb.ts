@@ -12,7 +12,7 @@ export const weaponOrb: PowerupType = {
     rc.fillStyle = WEAPON_COLORS[pw.wType];
     rc.beginPath(); rc.arc(0, 0, pw.r, 0, Math.PI * 2); rc.fill();
     rc.fillStyle = '#fff';
-    rc.font = 'bold 7px monospace'; rc.textAlign = 'center'; rc.textBaseline = 'middle';
+    rc.font = 'bold 10px monospace'; rc.textAlign = 'center'; rc.textBaseline = 'middle';
     rc.fillText(WEAPON_NAMES[pw.wType][0], 0, 1);   // single-letter label, e.g. 'V'/'S'/'M'
   },
   apply(pw, ctx) {

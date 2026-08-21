@@ -107,6 +107,7 @@ export class Player extends Entity {
         p.bombs--;
         ctx.spawnParticles('bombFlash', p.x, p.y);
         ctx.audio.play('bomb');
+        ctx.vibrate(300);
         ctx.enemyBullets.length = 0;        // bomb clears all enemy bullets on screen
         ctx.enemies.forEach(e => { e.hp -= 60; });
         if (ctx.boss) ctx.boss.hp -= 250;

@@ -31,7 +31,7 @@ export class Powerup extends Entity {
   /** Weapon type index (0=vulcan,1=spread,2=missile) this grants; meaningless for non-weapon kinds. */
   wType = 0;
   constructor(public readonly def: PowerupType, x: number, y: number, wType?: number) {
-    super(x, y, 10);
+    super(x, y, 14);
     this.wType = wType ?? 0;
   }
   update(dt: number, _ctx: GameContext): void {

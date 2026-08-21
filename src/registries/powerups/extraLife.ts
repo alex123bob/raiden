@@ -12,7 +12,7 @@ export const extraLife: PowerupType = {
     const pulse = 1 + Math.sin(pw.life * 6) * 0.15;
     rc.fillStyle = '#ff2255';
     rc.beginPath();
-    const s = pw.r * pulse;
+    const s = pw.r * 1.45 * pulse;
     rc.moveTo(0, s * 0.5);
     rc.bezierCurveTo(-s, -s * 0.4, -s * 0.5, -s, 0, -s * 0.2);
     rc.bezierCurveTo(s * 0.5, -s, s, -s * 0.4, 0, s * 0.5);

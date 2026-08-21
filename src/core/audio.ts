@@ -135,7 +135,37 @@ registerSfx({
 registerSfx({
   key: 'bomb',
   play(ac) {
-    const len = ac.sampleRate * 1.0;      // 1s of noise
+    const t0 = ac.currentTime;
+
+    // Layer 1: sharp initial crack — a short, bright noise burst for the flash's impact.
+    const crackLen = ac.sampleRate * 0.12;
+    const crackBuf = ac.createBuffer(1, crackLen, ac.sampleRate);
+    const cd = crackBuf.getChannelData(0);
+    for (let i = 0; i < crackLen; i++) cd[i] = (Math.random() * 2 - 1) * (1 - i / crackLen);
+    const crackSrc = ac.createBufferSource();
+    const crackFilter = ac.createBiquadFilter();
+    const crackGain = ac.createGain();
+    crackSrc.buffer = crackBuf;
+    crackFilter.type = 'highpass';
+    crackFilter.frequency.value = 1200;
+    crackSrc.connect(crackFilter); crackFilter.connect(crackGain); crackGain.connect(ac.destination);
+    crackGain.gain.setValueAtTime(0.9, t0);
+    crackGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
+    crackSrc.start(t0);
+
+    // Layer 2: deep sub-bass boom — pitch-dropping sine for weight and body.
+    const boomOsc = ac.createOscillator();
+    const boomGain = ac.createGain();
+    boomOsc.type = 'sine';
+    boomOsc.connect(boomGain); boomGain.connect(ac.destination);
+    boomOsc.frequency.setValueAtTime(150, t0);
+    boomOsc.frequency.exponentialRampToValueAtTime(35, t0 + 0.6);
+    boomGain.gain.setValueAtTime(1.0, t0);
+    boomGain.gain.exponentialRampToValueAtTime(0.001, t0 + 1.1);
+    boomOsc.start(t0); boomOsc.stop(t0 + 1.1);
+
+    // Layer 3: long noise rumble, filter sweeping up (whoosh) then back down (decay).
+    const len = ac.sampleRate * 1.4;
     const buf = ac.createBuffer(1, len, ac.sampleRate);
     const d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
@@ -144,13 +174,27 @@ registerSfx({
     const gain = ac.createGain();
     src.buffer = buf;
     filter.type = 'lowpass';
-    // Filter sweeps up (whoosh) then back down (rumble) for the bomb boom.
-    filter.frequency.setValueAtTime(80, ac.currentTime);
-    filter.frequency.linearRampToValueAtTime(900, ac.currentTime + 0.3);
-    filter.frequency.exponentialRampToValueAtTime(50, ac.currentTime + 1.0);
+    filter.frequency.setValueAtTime(100, t0);
+    filter.frequency.linearRampToValueAtTime(1400, t0 + 0.25);
+    filter.frequency.exponentialRampToValueAtTime(45, t0 + 1.4);
     src.connect(filter); filter.connect(gain); gain.connect(ac.destination);
-    gain.gain.setValueAtTime(0.6, ac.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 1.0);
-    src.start(ac.currentTime);
+    gain.gain.setValueAtTime(0.8, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 1.4);
+    src.start(t0);
+
+    // Layer 4: descending siren sweep riding on top, for a dramatic sci-fi edge.
+    const sirenOsc = ac.createOscillator();
+    const sirenFilter = ac.createBiquadFilter();
+    const sirenGain = ac.createGain();
+    sirenOsc.type = 'sawtooth';
+    sirenFilter.type = 'lowpass';
+    sirenFilter.frequency.value = 2200;
+    sirenOsc.connect(sirenFilter); sirenFilter.connect(sirenGain); sirenGain.connect(ac.destination);
+    sirenOsc.frequency.setValueAtTime(900, t0);
+    sirenOsc.frequency.exponentialRampToValueAtTime(120, t0 + 0.7);
+    sirenGain.gain.setValueAtTime(0.001, t0);
+    sirenGain.gain.linearRampToValueAtTime(0.25, t0 + 0.05);
+    sirenGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.75);
+    sirenOsc.start(t0); sirenOsc.stop(t0 + 0.75);
   },
 });
