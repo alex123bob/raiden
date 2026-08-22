@@ -9,6 +9,17 @@ import type { Game } from './Game.js';
 export const isTouch = typeof window !== 'undefined' && (('ontouchstart' in window) ||
                        (window.matchMedia && window.matchMedia('(pointer: coarse)').matches));
 
+// Safari on iOS has never implemented navigator.vibrate(). WebKit's native
+// <input type="checkbox" switch> control (Safari 17.4+) fires a real OS haptic tick,
+// but ONLY on a genuine finger tap on the element itself — a JS-triggered .click(),
+// sync or deferred, never fires it (confirmed by manual on-device testing). So instead
+// of clicking a proxy element from game code, we lay an invisible real switch directly
+// over the on-screen bomb button (see bombSwitchEl below): the player's tap IS the tap
+// on the switch, and the resulting 'change' event drives the existing bomb-fire latch.
+/** True on iOS/iPadOS (including iPadOS 13+, which masquerades as MacIntel with touch). */
+const isIOS = typeof navigator !== 'undefined' &&
+  (/iP(hone|od|ad)/.test(navigator.platform) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+
 /**
  * One-shot key-press actions (menus, pause, settings, speed cycling, start/
  * restart, clipboard share). Called only on the keydown transition (not while
@@ -152,6 +163,61 @@ function recomputeButtons(g: Game) {
   g.keys['KeyB']  = bombPressed;               // _bombUsed latch makes bomb one-shot
 }
 
+// iOS-only: an invisible native switch laid exactly over the on-screen bomb button (see
+// the header comment above `isIOS`). It intercepts touches there directly — rather than
+// canvas hit-testing — so the tap is a genuine gesture on the switch and WebKit fires the
+// real haptic tick as a side effect; the same touch still drives the ordinary bomb-role
+// bookkeeping (roles/recomputeButtons) that Player.ts's bomb latch depends on.
+// Known platform limitation (confirmed on-device, not fixable in code): WebKit only
+// fires the tick when the switch's touch is the SOLE active touch on the page — bombing
+// while the movement stick is also held drops the haptic silently. Visuals/gameplay are
+// unaffected either way; this is just the tactile feedback being unavailable that frame.
+let bombSwitch: HTMLInputElement | null = null;
+
+/** Lazily create the overlay switch described above. No-op off iOS. */
+function ensureBombSwitch(g: Game): HTMLInputElement | null {
+  if (!isIOS || typeof document === 'undefined') return null;
+  if (bombSwitch) return bombSwitch;
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.setAttribute('switch', '');
+  input.setAttribute('aria-hidden', 'true');
+  input.tabIndex = -1;
+  input.style.position = 'fixed';
+  input.style.opacity = '0';
+  input.style.margin = '0';
+  input.style.touchAction = 'none';
+  // No preventDefault/stopPropagation on its touch handlers below — WebKit's haptic
+  // tick only fires for the browser's own native tap handling on the control, and
+  // interfering with that (as the offscreen-proxy .click() approach did) killed it.
+  input.addEventListener('touchstart', e => {
+    getAudio();
+    for (const t of Array.from(e.changedTouches)) roles[t.identifier] = 'bomb';
+    recomputeButtons(g);
+  });
+  const release = (e: TouchEvent) => {
+    for (const t of Array.from(e.changedTouches)) delete roles[t.identifier];
+    recomputeButtons(g);
+  };
+  input.addEventListener('touchend', release);
+  input.addEventListener('touchcancel', release);
+  document.body.appendChild(input);
+  bombSwitch = input;
+  return input;
+}
+
+/** Keep the overlay switch aligned with TC.bomb's current on-screen position/size. */
+function positionBombSwitch() {
+  if (!bombSwitch) return;
+  const rect = canvas.getBoundingClientRect();
+  const scale = rect.width / W;
+  const b = TC.bomb;
+  bombSwitch.style.left   = (rect.left + (b.x - b.r) * scale) + 'px';
+  bombSwitch.style.top    = (rect.top  + (b.y - b.r) * scale) + 'px';
+  bombSwitch.style.width  = (b.r * 2 * scale) + 'px';
+  bombSwitch.style.height = (b.r * 2 * scale) + 'px';
+}
+
 /**
  * Wire up all input for the game: keyboard listeners always, plus touch
  * listeners (movement stick + fire/bomb/pause/gear buttons) when isTouch.
@@ -169,6 +235,7 @@ export function initInput(g: Game) {
   document.addEventListener('keyup', e => { g.keys[e.code] = false; e.preventDefault(); }, { passive: false });
 
   if (isTouch) {
+    ensureBombSwitch(g);
     canvas.addEventListener('touchstart', e => {
       e.preventDefault();
       getAudio();  // unlock WebAudio on first user gesture
@@ -176,7 +243,7 @@ export function initInput(g: Game) {
         const p = toCanvas(t);
         if (touchDiscrete(p, g)) continue;        // consumed by a menu/button
         if (within(p, TC.fire)) { roles[t.identifier] = 'fire'; continue; }
-        if (within(p, TC.bomb)) { roles[t.identifier] = 'bomb'; continue; }
+        if (!isIOS && within(p, TC.bomb)) { roles[t.identifier] = 'bomb'; continue; }  // iOS: the overlay switch owns this hit area instead
         if (stick.id === null) {               // claim as the movement stick
           stick.id = t.identifier;
           stick.bx = p.x; stick.by = p.y;
@@ -235,6 +302,12 @@ export function drawTouchControls(g: Game) {
   ctx.lineWidth = 2;
 
   const playing = (g.state === STATE.PLAYING || g.state === STATE.PAUSED);
+  const bombActive = playing && !g.settingsOpen;   // hide/disable while the settings panel is swallowing taps
+
+  if (bombSwitch) {
+    bombSwitch.style.display = bombActive ? '' : 'none';
+    if (bombActive) positionBombSwitch();
+  }
 
   if (playing) {
     // Analog movement stick — floating base + knob (or resting home ring)

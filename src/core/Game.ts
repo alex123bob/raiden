@@ -133,7 +133,7 @@ export class Game implements GameContext {
     this.shakeTime = Math.max(this.shakeTime, dur);
   }
 
-  /** GameContext hook: haptic buzz on touch devices that support the Vibration API. */
+  /** GameContext hook: haptic buzz on touch devices that support the Vibration API (Android; iOS haptics are driven by the real switch overlay in input.ts instead — see there). */
   vibrate(ms: number): void {
     if (isTouch && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(ms);
   }
