@@ -160,28 +160,11 @@ export class Player extends Entity {
 
     rc.restore();
 
-    // Combo synergy tether: when two different weapon types are equipped,
-    // draw a thin pulsing energy link between their (laterally offset) muzzle
-    // points, blending both weapons' colors — a cosmetic cue that the pair is
-    // an intentional combo rather than two independent guns.
+    // Combo synergy: when two different weapon types are equipped, a fusion
+    // core forms above the nose (see drawComboSynergy) — a cosmetic cue that
+    // the pair is an intentional combo rather than two independent guns.
     if (p.weapons.length === 2 && p.weapons[0].type !== p.weapons[1].type) {
-      const t = Date.now() / 1000;
-      const pulse = 0.5 + Math.sin(t * 6) * 0.5;
-      const leftOff = comboOffset(0, 2), rightOff = comboOffset(1, 2);
-      const grad = rc.createLinearGradient(p.x + leftOff, p.y - 20, p.x + rightOff, p.y - 20);
-      grad.addColorStop(0, WEAPON_COLORS[p.weapons[0].type]);
-      grad.addColorStop(1, WEAPON_COLORS[p.weapons[1].type]);
-      rc.save();
-      rc.strokeStyle = grad;
-      rc.lineWidth = 1.2 + pulse * 0.8;
-      rc.globalAlpha = 0.35 + pulse * 0.35;
-      rc.shadowColor = WEAPON_COLORS[p.weapons[0].type];
-      rc.shadowBlur = 4 + pulse * 4;
-      rc.beginPath();
-      rc.moveTo(p.x + leftOff, p.y - 20);
-      rc.lineTo(p.x + rightOff, p.y - 20);
-      rc.stroke();
-      rc.restore();
+      drawComboSynergy(rc, p);
     }
 
     // Charge ring: shown while holding fire with a maxed weapon; sweeps a full
@@ -246,4 +229,71 @@ export function respawnPlayer(p: Player, _ctx: GameContext): void {
   p.dead = false;
   p.x = W / 2; p.y = H - 100;
   p.invTimer = 3.0;
+}
+
+/**
+ * Combo synergy fusion effect, drawn above the nose when two different
+ * weapon types are equipped: a pulsing white-hot core (gradient blending
+ * both weapon colors) fed by two crackling energy arcs from each muzzle,
+ * with a pair of orbiting sparks per weapon color. Reuses the crackle-jitter
+ * and orbiting-sparkle idioms already used by plasma bullets/powerup shine,
+ * so the fusion reads as "these two streams are merging" rather than a
+ * decorative line between two guns.
+ */
+function drawComboSynergy(rc: RenderContext, p: Player): void {
+  const t = Date.now() / 1000;
+  const pulse = 0.5 + Math.sin(t * 6) * 0.5;          // 0..1 breathing pulse
+  const colorA = WEAPON_COLORS[p.weapons[0].type];
+  const colorB = WEAPON_COLORS[p.weapons[1].type];
+  const leftOff = comboOffset(0, 2), rightOff = comboOffset(1, 2);
+  const muzzleA = { x: p.x + leftOff, y: p.y - 20 };
+  const muzzleB = { x: p.x + rightOff, y: p.y - 20 };
+  const core = { x: p.x, y: p.y - 34 };                // fusion point above the nose, between the muzzles
+  const coreR = 5 + pulse * 3;
+
+  rc.save();
+
+  // Two crackling arcs feed from each muzzle into the fusion core, jittering
+  // deterministically over time (not per-frame random) so replay stays stable.
+  const drawArc = (muzzle: { x: number; y: number }, color: string, phase: number) => {
+    const jitter = Math.sin(t * 14 + phase) * 3;
+    const midX = (muzzle.x + core.x) / 2 + jitter;
+    const midY = (muzzle.y + core.y) / 2;
+    rc.strokeStyle = color;
+    rc.lineWidth = 1 + pulse * 1.2;
+    rc.globalAlpha = 0.5 + pulse * 0.4;
+    rc.beginPath();
+    rc.moveTo(muzzle.x, muzzle.y);
+    rc.lineTo(midX, midY);
+    rc.lineTo(core.x, core.y);
+    rc.stroke();
+  };
+  drawArc(muzzleA, colorA, 0);
+  drawArc(muzzleB, colorB, 2.1);
+
+  // Fusion core: radial gradient blending both weapon colors through a
+  // white-hot center, breathing in size/opacity with `pulse`.
+  rc.globalAlpha = 0.7 + pulse * 0.3;
+  const grad = rc.createRadialGradient(core.x, core.y, 0, core.x, core.y, coreR);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(0.45, colorA);
+  grad.addColorStop(1, colorB);
+  rc.fillStyle = grad;
+  rc.beginPath(); rc.arc(core.x, core.y, coreR, 0, Math.PI * 2); rc.fill();
+
+  // Two sparks per weapon color, orbiting the core on opposite sides.
+  const drawSpark = (color: string, angle: number) => {
+    const orbitR = coreR + 5;
+    const sx = core.x + Math.cos(angle) * orbitR;
+    const sy = core.y + Math.sin(angle) * orbitR * 0.6;   // flattened orbit (foreshortened, ship-facing view)
+    rc.fillStyle = color;
+    rc.globalAlpha = 0.6 + pulse * 0.4;
+    rc.beginPath(); rc.arc(sx, sy, 1.4, 0, Math.PI * 2); rc.fill();
+  };
+  drawSpark(colorA, t * 3);
+  drawSpark(colorA, t * 3 + Math.PI);
+  drawSpark(colorB, t * 3 + Math.PI / 2);
+  drawSpark(colorB, t * 3 + Math.PI * 1.5);
+
+  rc.restore();
 }
