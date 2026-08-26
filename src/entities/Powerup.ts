@@ -1,9 +1,10 @@
-import { W, H } from '../config.js';
+import { H } from '../config.js';
 import type { GameContext } from '../core/GameContext.js';
 import type { RenderContext } from '../core/Renderer.js';
 import { Entity } from '../core/Entity.js';
 import { circleHit } from '../core/collision.js';
 import type { Enemy } from './Enemy.js';
+import { WEAPON_NAMES } from './Bullet.js';
 import { POWERUP_TYPES } from '../registries/powerups/index.js';
 
 /**
@@ -108,7 +109,7 @@ function drawShine(rc: RenderContext, pw: Powerup): void {
 export function tryDropPowerup(e: Enemy, ctx: GameContext): void {
   if (Math.random() >= e.dropChance) return;
   const isBomb = Math.random() < 0.15;
-  const wType = Math.floor(Math.random() * 3);
+  const wType = Math.floor(Math.random() * WEAPON_NAMES.length);
   const def = POWERUP_TYPES.get(isBomb ? 'bomb' : 'weapon')!;
   ctx.powerups.push(new Powerup(def, e.x, e.y, isBomb ? undefined : wType));
 }

@@ -98,13 +98,13 @@ export type EnemyBullet = Bullet;
  * Speed, lifetime, and base damage are set per kind; caller pushes it into
  * ctx.playerBullets. Spread bullets are slower (380) than vulcan/missile (680).
  */
-export function mkBullet(kindKey: 'vulcan' | 'spread' | 'missile', x: number, y: number, angle: number): Bullet {
+export function mkBullet(kindKey: 'vulcan' | 'spread' | 'missile' | 'plasma', x: number, y: number, angle: number): Bullet {
   const kind = BULLET_KINDS.get(kindKey)!;
-  const spd = kindKey === 'spread' ? 380 : 680;   // pixels/second
+  const spd = kindKey === 'spread' ? 380 : kindKey === 'plasma' ? 620 : 680;   // pixels/second
   const b = new Bullet(kind, x, y, Math.cos(angle) * spd, Math.sin(angle) * spd);
   b.angle = angle;
   b.life = 2.0;
-  b.dmg = kindKey === 'vulcan' ? 5 : kindKey === 'spread' ? 10 : 8;
+  b.dmg = kindKey === 'vulcan' ? 5 : kindKey === 'spread' ? 10 : kindKey === 'plasma' ? 12 : 8;
   return b;
 }
 
@@ -134,29 +134,32 @@ export function spawnEnemyBullet(ctx: GameContext, x: number, y: number,
  */
 export function getFireRate(weapon: number, lv: number): number {
   if (weapon === 1) return Math.max(0.18, 0.30 - lv * 0.025);
+  if (weapon === 3) return Math.max(0.10, 0.20 - lv * 0.02);
   return Math.max(0.05, 0.13 - lv * 0.015);
 }
 
 /**
- * Aim offset (radians) applied to a weapon slot when two weapons are combined,
- * so the two slots fan apart. Single slot = straight (0); slot 0 tilts left,
- * slot 1 tilts right.
+ * Lateral spawn offset (px) applied to a weapon slot when two weapons are
+ * combined, so the two slots' streams visually separate by origin rather than
+ * by angle — every weapon's fan/lane pattern stays centered on straight up
+ * regardless of combo state. Single slot = no offset; slot 0 shifts left,
+ * slot 1 shifts right.
  */
 export function comboOffset(slotIndex: number, totalSlots: number): number {
   if (totalSlots === 1) return 0;
-  return slotIndex === 0 ? -0.26 : 0.26;
+  return slotIndex === 0 ? -14 : 14;
 }
 
 /**
  * Fire the player's normal shot for the current frame: iterate every equipped
  * weapon slot and emit its level-dependent bullet pattern into
- * ctx.playerBullets. Handles all three weapon types (vulcan/spread/missile).
+ * ctx.playerBullets. Handles all four weapon types (vulcan/spread/missile/plasma).
  */
 export function firePlayer(p: Player, ctx: GameContext): void {
   const total = p.weapons.length;
   p.weapons.forEach((slot, idx) => {
     const lv = slot.lv;
-    const off = comboOffset(idx, total);   // per-slot fan tilt in a combo
+    const off = comboOffset(idx, total);   // per-slot lateral spawn shift in a combo
     const UP = -Math.PI / 2;                // straight up
 
     if (slot.type === 0) {
@@ -167,41 +170,41 @@ export function firePlayer(p: Player, ctx: GameContext): void {
         b.lv = lv;
         ctx.playerBullets.push(b);
       };
-      pushV(p.x - 8, p.y - 20, UP + off - spread);
-      pushV(p.x + 8, p.y - 20, UP + off + spread);
+      pushV(p.x + off - 8, p.y - 20, UP - spread);
+      pushV(p.x + off + 8, p.y - 20, UP + spread);
       if (lv >= 4) {
         // Extra wide-angle pair from the wings.
-        pushV(p.x - 18, p.y - 8, UP + off - 0.38);
-        pushV(p.x + 18, p.y - 8, UP + off + 0.38);
+        pushV(p.x + off - 18, p.y - 8, UP - 0.38);
+        pushV(p.x + off + 18, p.y - 8, UP + 0.38);
       }
-      if (lv >= 5) pushV(p.x, p.y - 22, UP + off);   // dead-center shot at max
+      if (lv >= 5) pushV(p.x + off, p.y - 22, UP);   // dead-center shot at max
       ctx.audio.play('shoot', { weapon: 0 });
 
     } else if (slot.type === 1) {
       // SPREAD: a fan of bullets whose count/arc widens with level.
       if (lv === 1) {
-        [UP + off - 0.30, UP + off, UP + off + 0.30].forEach(a =>
-          ctx.playerBullets.push(mkSpreadBullet(p.x, p.y - 20, a, lv)));
+        [UP - 0.30, UP, UP + 0.30].forEach(a =>
+          ctx.playerBullets.push(mkSpreadBullet(p.x + off, p.y - 20, a, lv)));
       } else if (lv === 2) {
         const half = 0.35;   // half-arc in radians; bullets evenly spaced across it
         for (let i = 0; i < 4; i++)
-          ctx.playerBullets.push(mkSpreadBullet(p.x, p.y - 20, UP + off - half + (i / 3) * (half * 2), lv));
+          ctx.playerBullets.push(mkSpreadBullet(p.x + off, p.y - 20, UP - half + (i / 3) * (half * 2), lv));
       } else if (lv === 3) {
         const half = 0.40;
         for (let i = 0; i < 5; i++)
-          ctx.playerBullets.push(mkSpreadBullet(p.x, p.y - 20, UP + off - half + (i / 4) * (half * 2), lv));
+          ctx.playerBullets.push(mkSpreadBullet(p.x + off, p.y - 20, UP - half + (i / 4) * (half * 2), lv));
       } else if (lv === 4) {
         const half = 0.40;
         for (let i = 0; i < 5; i++)
-          ctx.playerBullets.push(mkSpreadBullet(p.x, p.y - 20, UP + off - half + (i / 4) * (half * 2), lv));
+          ctx.playerBullets.push(mkSpreadBullet(p.x + off, p.y - 20, UP - half + (i / 4) * (half * 2), lv));
         // Plus two extra wide side shots.
-        ctx.playerBullets.push(mkSpreadBullet(p.x - 12, p.y - 14, UP + off - 0.70, lv));
-        ctx.playerBullets.push(mkSpreadBullet(p.x + 12, p.y - 14, UP + off + 0.70, lv));
+        ctx.playerBullets.push(mkSpreadBullet(p.x + off - 12, p.y - 14, UP - 0.70, lv));
+        ctx.playerBullets.push(mkSpreadBullet(p.x + off + 12, p.y - 14, UP + 0.70, lv));
       } else {
         // lv5: widest 7-bullet fan.
         const half = 0.50;
         for (let i = 0; i < 7; i++)
-          ctx.playerBullets.push(mkSpreadBullet(p.x, p.y - 20, UP + off - half + (i / 6) * (half * 2), lv));
+          ctx.playerBullets.push(mkSpreadBullet(p.x + off, p.y - 20, UP - half + (i / 6) * (half * 2), lv));
       }
       ctx.audio.play('shoot', { weapon: 1 });
 
@@ -211,9 +214,9 @@ export function firePlayer(p: Player, ctx: GameContext): void {
       const counts = [2, 2, 3, 4, 5];                // missiles per shot by level
       const count = counts[lv - 1];
       for (let i = 0; i < count; i++) {
-        const offset = (i - (count - 1) / 2) * 16 * missileSpread;   // x offset, centered on player
-        const b = mkBullet('missile', p.x + offset, p.y - 20, 0);
-        b.vx = offset * 0.6 + Math.sin(off) * 80;   // splay outward, biased by combo tilt
+        const laneOffset = (i - (count - 1) / 2) * 16 * missileSpread;   // x offset, centered on player
+        const b = mkBullet('missile', p.x + off + laneOffset, p.y - 20, 0);
+        b.vx = laneOffset * 0.6;   // splay outward from the launch lane
         b.vy = -320;                                // initial upward speed
         b.dmg = 8;
         b.life = 2.2;
@@ -221,6 +224,12 @@ export function firePlayer(p: Player, ctx: GameContext): void {
         ctx.playerBullets.push(b);
       }
       ctx.audio.play('shoot', { weapon: 2 });
+
+    } else if (slot.type === 3) {
+      // PLASMA: parallel piercing lanes, count/spacing widening with level.
+      for (const laneOffset of plasmaLanes(lv))
+        ctx.playerBullets.push(mkPlasmaBullet(p.x + off + laneOffset, p.y - 20, UP, lv));
+      ctx.audio.play('shoot', { weapon: 3 });
     }
   });
 }
@@ -235,10 +244,34 @@ function mkSpreadBullet(x: number, y: number, angle: number, lv: number): Bullet
 }
 
 /**
+ * Lane x-offsets (px) for the plasma weapon's normal shot at level `lv`,
+ * evenly distributed left/right of center: 1 lane at lv1, 2 flanking lanes
+ * (no center) at lv2, then a growing center+flanks layout through lv5.
+ */
+function plasmaLanes(lv: number): number[] {
+  const gap = 11;   // px between adjacent lanes
+  if (lv === 1) return [0];
+  if (lv === 2) return [-gap / 2, gap / 2];
+  if (lv === 3) return [-gap, 0, gap];
+  if (lv === 4) return [-gap * 1.5, -gap / 2, gap / 2, gap * 1.5];
+  return [-gap * 2, -gap, 0, gap, gap * 2];   // lv5
+}
+
+/** Make a piercing plasma bolt whose radius and damage grow with level. */
+function mkPlasmaBullet(x: number, y: number, angle: number, lv: number): Bullet {
+  const b = mkBullet('plasma', x, y, angle);
+  b.lv = lv;
+  b.r = 3 + lv * 0.4;
+  b.dmg = 12 + lv * 4;
+  b.pierce = true;
+  return b;
+}
+
+/**
  * Fire the charged "super" burst when the charge meter fills at lv5. Iterates
  * the weapon slots but only maxed (lv5) slots contribute a burst; a non-maxed
  * combo partner keeps its normal firePlayer pattern and sits this out. Each
- * weapon type has a distinctive super shape (arc / full ring / heavy salvo).
+ * weapon type has a distinctive super shape (arc / full ring / heavy salvo / beam).
  */
 export function fireSuper(p: Player, ctx: GameContext): void {
   const total = p.weapons.length;
@@ -254,8 +287,8 @@ export function fireSuper(p: Player, ctx: GameContext): void {
       const halfArc = (Math.PI * 2) / 3;
       const count = 12;
       for (let i = 0; i < count; i++) {
-        const a = UP + off - halfArc + (i / (count - 1)) * (halfArc * 2);
-        const b = mkBullet('vulcan', p.x, p.y - 22, a);
+        const a = UP - halfArc + (i / (count - 1)) * (halfArc * 2);
+        const b = mkBullet('vulcan', p.x + off, p.y - 22, a);
         b.r = 6; b.dmg = 15; b.lv = slot.lv;
         ctx.playerBullets.push(b);
       }
@@ -264,8 +297,8 @@ export function fireSuper(p: Player, ctx: GameContext): void {
       // SPREAD super: a full 360-degree ring of 16 heavy bullets.
       const count = 16;
       for (let i = 0; i < count; i++) {
-        const a = off + (i / count) * Math.PI * 2;
-        const b = mkSpreadBullet(p.x, p.y, a, 5);
+        const a = (i / count) * Math.PI * 2;
+        const b = mkSpreadBullet(p.x + off, p.y, a, 5);
         b.r = 7; b.dmg = 18;
         ctx.playerBullets.push(b);
       }
@@ -275,9 +308,9 @@ export function fireSuper(p: Player, ctx: GameContext): void {
       const count = 8;
       const spreadMul = total > 1 ? 1.8 : 1.0;
       for (let i = 0; i < count; i++) {
-        const offset = (i - (count - 1) / 2) * 20 * spreadMul;
-        const b = mkBullet('missile', p.x + offset, p.y - 20, 0);
-        b.vx = offset * 0.5 + Math.sin(off) * 80;
+        const laneOffset = (i - (count - 1) / 2) * 20 * spreadMul;
+        const b = mkBullet('missile', p.x + off + laneOffset, p.y - 20, 0);
+        b.vx = laneOffset * 0.5;
         b.vy = -320;
         b.r = 6;
         b.dmg = 20;
@@ -286,6 +319,12 @@ export function fireSuper(p: Player, ctx: GameContext): void {
         ctx.playerBullets.push(b);
       }
       ctx.audio.play('shoot', { weapon: 2 });
+    } else if (slot.type === 3) {
+      // PLASMA super: one massive dead-center piercing beam column.
+      const b = mkPlasmaBullet(p.x + off, p.y - 22, UP, 5);
+      b.r = 12; b.dmg = 70; b.life = 2.6;
+      ctx.playerBullets.push(b);
+      ctx.audio.play('shoot', { weapon: 3 });
     }
   });
 }
@@ -318,7 +357,7 @@ export function drawEnemyBullets(rc: RenderContext, ctx: GameContext): void {
   ctx.enemyBullets.forEach(b => b.draw(rc, ctx));
 }
 
-/** Display names for the three weapon types, indexed by WeaponSlot.type. */
-export const WEAPON_NAMES = ['VULCAN', 'SPREAD', 'MISSILE'];
-/** Theme colors for the three weapon types, indexed by WeaponSlot.type. */
-export const WEAPON_COLORS = ['#ffaa00', '#ff8800', '#ff4488'];
+/** Display names for the four weapon types, indexed by WeaponSlot.type. */
+export const WEAPON_NAMES = ['VULCAN', 'SPREAD', 'MISSILE', 'PLASMA'];
+/** Theme colors for the four weapon types, indexed by WeaponSlot.type. */
+export const WEAPON_COLORS = ['#ffaa00', '#ff8800', '#ff4488', '#bb66ff'];

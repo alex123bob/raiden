@@ -2,7 +2,7 @@ import { W, H, CHARGE_DURATION, STATE } from '../config.js';
 import type { GameContext } from '../core/GameContext.js';
 import type { RenderContext } from '../core/Renderer.js';
 import { Entity } from '../core/Entity.js';
-import { WEAPON_COLORS, getFireRate, firePlayer, fireSuper } from './Bullet.js';
+import { WEAPON_COLORS, getFireRate, firePlayer, fireSuper, comboOffset } from './Bullet.js';
 
 /** One equipped weapon: `type` selects vulcan(0)/spread(1)/missile(2); `lv` is its power level 1..5. */
 export interface WeaponSlot { type: number; lv: number; }
@@ -159,6 +159,30 @@ export class Player extends Entity {
     rc.beginPath(); rc.moveTo(20, 8); rc.lineTo(8, 0); rc.stroke();
 
     rc.restore();
+
+    // Combo synergy tether: when two different weapon types are equipped,
+    // draw a thin pulsing energy link between their (laterally offset) muzzle
+    // points, blending both weapons' colors — a cosmetic cue that the pair is
+    // an intentional combo rather than two independent guns.
+    if (p.weapons.length === 2 && p.weapons[0].type !== p.weapons[1].type) {
+      const t = Date.now() / 1000;
+      const pulse = 0.5 + Math.sin(t * 6) * 0.5;
+      const leftOff = comboOffset(0, 2), rightOff = comboOffset(1, 2);
+      const grad = rc.createLinearGradient(p.x + leftOff, p.y - 20, p.x + rightOff, p.y - 20);
+      grad.addColorStop(0, WEAPON_COLORS[p.weapons[0].type]);
+      grad.addColorStop(1, WEAPON_COLORS[p.weapons[1].type]);
+      rc.save();
+      rc.strokeStyle = grad;
+      rc.lineWidth = 1.2 + pulse * 0.8;
+      rc.globalAlpha = 0.35 + pulse * 0.35;
+      rc.shadowColor = WEAPON_COLORS[p.weapons[0].type];
+      rc.shadowBlur = 4 + pulse * 4;
+      rc.beginPath();
+      rc.moveTo(p.x + leftOff, p.y - 20);
+      rc.lineTo(p.x + rightOff, p.y - 20);
+      rc.stroke();
+      rc.restore();
+    }
 
     // Charge ring: shown while holding fire with a maxed weapon; sweeps a full
     // circle over CHARGE_DURATION and is colored/glowed by that weapon's color.

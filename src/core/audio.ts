@@ -67,7 +67,7 @@ export function SFX_REGISTRY_KEYS(): string[] { return [...SFX.keys()]; }
 registerSfx({
   key: 'shoot',
   play(ac, opts) {
-    const weapon = opts.weapon ?? 0;      // weapon index selects timbre/pitch (0=vulcan, 1=laser, 2=plasma…)
+    const weapon = opts.weapon ?? 0;      // weapon index selects timbre/pitch (0=vulcan, 1=spread, 2=missile, 3=plasma)
     const osc = ac.createOscillator();
     const gain = ac.createGain();
     osc.connect(gain); gain.connect(ac.destination);
@@ -79,6 +79,14 @@ registerSfx({
       gain.gain.setValueAtTime(0.10, ac.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.15);
       osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.15);
+    } else if (weapon === 3) {
+      // Plasma: bright sawtooth crackle with a fast upward chirp.
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(700, ac.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1400, ac.currentTime + 0.06);
+      gain.gain.setValueAtTime(0.09, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.09);
+      osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.09);
     } else {
       // Default shot: short blip that drops to half its base pitch.
       osc.type = 'square';
