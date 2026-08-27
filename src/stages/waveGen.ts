@@ -43,7 +43,7 @@ registerMotion('form', (desc, diffMult) => pathFormation(desc[0], desc[1], desc[
  * A single spawn instruction as authored in stageData.ts (density 1.0 baseline).
  * Exactly one of `boss` / `type` / `powerup` is meaningful per entry.
  */
-interface WaveDescriptor {
+export interface WaveDescriptor {
   /** Spawn time in seconds from stage start. */
   t: number;
   /** If set, this entry triggers the boss for stage N (clears remaining enemies). */

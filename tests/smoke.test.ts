@@ -71,6 +71,16 @@ describe('game smoke test (real module graph, stubbed DOM)', () => {
     expect(g3.currentStage).toBe(1);
   });
 
+  it('startGame(stage) jumps straight into the requested stage', () => {
+    const game = newGame();
+    game.loopMult = 1;
+    game.startGame(4);
+    expect(game.currentStage).toBe(4);
+    expect(game.player).not.toBeNull();
+    expect(game.waveTable.length).toBeGreaterThan(0);
+    expect(game.waveTable.some(e => e.type === 'dropship')).toBe(true);
+  });
+
   it('renders every screen state without unbound references', () => {
     const g4 = newGame();
     let ts = 1000; g4.lastTime = ts;
@@ -78,6 +88,7 @@ describe('game smoke test (real module graph, stubbed DOM)', () => {
       () => { g4.state = 0; g4.settingsOpen = false; },
       () => { g4.state = 3; g4.settingsOpen = false; },
       () => { g4.state = 5; g4.settingsOpen = false; },
+      () => { g4.state = 6; g4.settingsOpen = false; },
       () => { g4.state = 2; g4.settingsOpen = true; g4.startGame(); },
     ];
     for (const scene of scenes) {

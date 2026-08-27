@@ -2,6 +2,7 @@ import { W, H } from '../config.js';
 import { ctx } from '../canvas.js';
 import { isTouch } from '../core/input.js';
 import type { Game } from '../core/Game.js';
+import { STAGES } from '../stages/stageData.js';
 
 // === SCREENS ===
 /** Title screen: glowing "RAIDEN" logo, blinking start prompt, hi-score, and input hints (keyboard vs touch). */
@@ -39,8 +40,45 @@ export function drawTitle(g: Game) {
     ctx.fillText('L-stick move   FIRE   ★ bomb   ⚙ settings', W/2, 478);
   } else {
     ctx.fillText('ARROWS move   SPACE fire   B bomb', W/2, 460);
-    ctx.fillText('P pause   S settings', W/2, 478);
+    ctx.fillText('P pause   S settings   L select stage', W/2, 478);
   }
+}
+
+/** Stage-select screen: pick any authored stage (1..STAGE_COUNT) to jump straight into, for testing/replay. */
+export function drawStageSelect(g: Game) {
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#aaaaff';
+  ctx.font = '14px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('SELECT STAGE', W/2, 140);
+
+  const stage = STAGES[g.selectedStage - 1];
+
+  ctx.shadowColor = '#0099ff';
+  ctx.shadowBlur = 24;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 64px monospace';
+  ctx.fillText('◄ ' + String(g.selectedStage).padStart(2, '0') + ' ►', W/2, 240);
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
+
+  // Distinct enemy types this stage spawns (in wave order, deduped) plus its boss.
+  const seen = new Set<string>();
+  const enemyTypes: string[] = [];
+  for (const wave of stage.waves) {
+    if ('type' in wave && wave.type && !seen.has(wave.type)) { seen.add(wave.type); enemyTypes.push(wave.type); }
+  }
+  ctx.fillStyle = '#aaffaa';
+  ctx.font = '13px monospace';
+  ctx.fillText('ENEMIES: ' + (enemyTypes.join(', ') || 'none'), W/2, 300);
+  ctx.fillStyle = '#ffaa88';
+  ctx.fillText('BOSS: ' + stage.boss.type, W/2, 322);
+
+  ctx.fillStyle = '#666';
+  ctx.font = '11px monospace';
+  ctx.fillText('◄ ► CHANGE   ENTER START   ESC BACK', W/2, 460);
 }
 
 /** Pause overlay: dim scrim plus "PAUSED" and the resume hint. Drawn on top of the frozen world layer. */

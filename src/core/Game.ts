@@ -21,7 +21,7 @@ import { runCollision } from './collision.js';
 import { STAGES } from '../stages/stageData.js';
 import { buildWaveTable, updateWaves, type WaveEntry } from '../stages/waveGen.js';
 import { drawHUD } from '../render/hud.js';
-import { drawTitle, drawPause, drawSettings, drawGameOver, drawStageClear, drawVictory } from '../render/screens.js';
+import { drawTitle, drawPause, drawSettings, drawGameOver, drawStageClear, drawVictory, drawStageSelect } from '../render/screens.js';
 import { drawTouchControls } from './input.js';
 
 /** Optional constructor overrides for Game — lets tests inject a stub renderer/audio bus. */
@@ -58,6 +58,7 @@ export class Game implements GameContext {
   waveIndex = 0;                   // index of the next unspawned waveTable entry
   stageTimer = 0;                  // seconds elapsed since the current stage started
   currentStage = 1;                // 1-based stage number currently being played
+  selectedStage = 1;                // stage highlighted on the STAGESELECT screen
   bossSpawned = false;             // true once this stage's boss trigger has fired
   bossMaxHp = 0;                   // boss HP at spawn, for the HUD/boss health bar
   bossPhase = 0;                   // boss attack-phase index (0-based)
@@ -94,13 +95,13 @@ export class Game implements GameContext {
     }
   }
 
-  /** Reset for a brand-new run: fresh player/score, clear transient arrays, enter stage 1. */
-  startGame(): void {
+  /** Reset for a brand-new run: fresh player/score, clear transient arrays, enter stage `stage` (1-based, default 1). */
+  startGame(stage = 1): void {
     this.score = 0;
     this.player = createPlayer();
     this.particles.length = 0;
     this.powerups.length = 0;
-    this.startStage(1);
+    this.startStage(stage);
     this.state = STATE.PLAYING;
   }
 
@@ -204,6 +205,7 @@ export class Game implements GameContext {
     if (this.state === STATE.TITLE)         drawTitle(this);
     else if (this.state === STATE.GAMEOVER) drawGameOver(this);
     else if (this.state === STATE.VICTORY)  drawVictory(this);
+    else if (this.state === STATE.STAGESELECT) drawStageSelect(this);
     else {
       this.enemies.forEach(e => e.draw(this.renderer, this));
       this.boss?.draw(this.renderer, this);

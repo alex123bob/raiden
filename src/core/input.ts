@@ -1,4 +1,4 @@
-import { W, H, STATE, SPEED_STEPS } from '../config.js';
+import { W, H, STATE, SPEED_STEPS, STAGE_COUNT } from '../config.js';
 import { canvas, ctx } from '../canvas.js';
 import { getAudio } from './audio.js';
 import type { Game } from './Game.js';
@@ -34,6 +34,19 @@ function handleKeyPress(g: Game, code: string) {
     if (code === 'BracketLeft') cycleSpeed(g, -1);
     if (code === 'BracketRight')cycleSpeed(g, 1);
     if (code === 'KeyS')        g.settingsOpen = false;
+    return;
+  }
+  if (g.state === STATE.STAGESELECT) {
+    if (code === 'ArrowLeft' || code === 'ArrowUp')
+      g.selectedStage = Math.max(1, g.selectedStage - 1);
+    if (code === 'ArrowRight' || code === 'ArrowDown')
+      g.selectedStage = Math.min(STAGE_COUNT, g.selectedStage + 1);
+    if (code === 'Enter')  { g.loopMult = 1; g.startGame(g.selectedStage); }
+    if (code === 'Escape') g.state = STATE.TITLE;
+    return;
+  }
+  if (code === 'KeyL' && g.state === STATE.TITLE) {
+    g.state = STATE.STAGESELECT;
     return;
   }
   if (code === 'KeyP') {
