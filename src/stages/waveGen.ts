@@ -183,6 +183,7 @@ export function updateWaves(dt: number, ctx: GameContext): void {
       ctx.enemies.length = 0;
       ctx.enemyBullets.length = 0;
       ctx.boss = createBoss(ctx);
+      ctx.music.play('boss');
       ctx.bossSpawned = true;
     } else if (entry.powerup) {
       const def = POWERUP_TYPES.get(entry.powerup)!;

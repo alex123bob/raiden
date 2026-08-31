@@ -45,7 +45,7 @@ export class Player extends Entity {
     if (p.dead) {
       if (p.gameOverTimer !== undefined) {
         p.gameOverTimer -= dt;
-        if (p.gameOverTimer <= 0) ctx.state = STATE.GAMEOVER;
+        if (p.gameOverTimer <= 0) { ctx.state = STATE.GAMEOVER; ctx.music.play('game-over'); }
       } else {
         p.respawnTimer -= dt;
         if (p.respawnTimer <= 0) respawnPlayer(p, ctx);

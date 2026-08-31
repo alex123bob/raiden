@@ -5,6 +5,7 @@ import type { Bullet, EnemyBullet } from '../entities/Bullet.js';
 import type { Powerup } from '../entities/Powerup.js';
 import type { Particle } from '../entities/Particle.js';
 import type { AudioBus } from './audio.js';
+import type { MusicSink } from './music.js';
 import type { WaveEntry } from '../stages/waveGen.js';
 
 // The typed `g`: exactly the fields the current code reads, declared as a
@@ -40,6 +41,7 @@ export interface GameContext {
   victoryTimer: number;                   // countdown (s) used by the VICTORY sequence
   score: number;                          // current run score
   audio: AudioBus;                        // sound effect sink (WebAudioBus, or SilentBus in tests)
+  music: MusicSink;                       // background-music sink (WebAudioMusic, or SilentMusic in tests)
   /** Spawn a burst of particles of `kind` at (x,y); opts tune size/color/etc. */
   spawnParticles(kind: string, x: number, y: number, opts?: Record<string, unknown>): void;
   /** Trigger screen shake: `mag` amplitude in px, `dur` duration in seconds. */

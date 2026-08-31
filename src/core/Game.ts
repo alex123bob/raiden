@@ -3,6 +3,7 @@ import { ctx } from '../canvas.js';
 import type { GameContext } from './GameContext.js';
 import { CanvasRenderer, type RenderContext } from './Renderer.js';
 import { WebAudioBus, type AudioBus } from './audio.js';
+import { WebAudioMusic, stageThemeFor, type MusicSink } from './music.js';
 import { isTouch } from './input.js';
 import { diffMultFor, densityForStage } from './difficulty.js';
 import { initBackground, updateStars, drawStars, updateBackground, drawBackground } from '../stages/background.js';
@@ -28,6 +29,7 @@ import { drawTouchControls } from './input.js';
 export interface GameDeps {
   renderer?: RenderContext;
   audio?: AudioBus;
+  music?: MusicSink;
 }
 
 /**
@@ -72,12 +74,16 @@ export class Game implements GameContext {
   shakeMag = 0;                    // peak amplitude (px) of the current shake
   readonly renderer: RenderContext;   // drawing surface (CanvasRenderer, or a test stub)
   readonly audio: AudioBus;           // sound effect sink (WebAudioBus, or SilentBus in tests)
+  readonly music: MusicSink;          // background music sink
+  private lastMusicState = -1;        // last STATE.* value seen by loop(), for the TITLE music guard
   private loopFn: (ts: number) => void;   // bound loop() reference, so each rAF request reuses the same closure
 
   constructor(deps: GameDeps = {}) {
     this.renderer = deps.renderer ?? new CanvasRenderer(ctx);
     this.audio = deps.audio ?? new WebAudioBus();
     this.audio.setEnabled(this.soundOn);
+    this.music = deps.music ?? new WebAudioMusic();
+    this.music.setEnabled(this.soundOn);
     this.loopFn = (ts) => this.loop(ts);
   }
 
@@ -85,7 +91,11 @@ export class Game implements GameContext {
   toggleSound(): void {
     this.soundOn = !this.soundOn;
     this.audio.setEnabled(this.soundOn);
+    this.music.setEnabled(this.soundOn);
   }
+
+  /** Cue the game-over music sting. Called when the final life is lost. */
+  onGameOver(): void { this.music.play('game-over'); }
 
   /** Persist the current score as the new high score if it beats the stored one. */
   saveHS(): void {
@@ -108,6 +118,7 @@ export class Game implements GameContext {
   /** Reset per-stage state and begin stage `n` (1-based): rebuild difficulty, background, and wave table. */
   startStage(stage: number): void {
     this.currentStage = stage;
+    this.music.play(stageThemeFor(stage));
     this.diffMult = diffMultFor(stage, this.loopMult);
     initBackground(stage, this);
     this.waveTable = buildWaveTable(STAGES[stage - 1], this.diffMult, densityForStage(stage));
@@ -160,6 +171,8 @@ export class Game implements GameContext {
     requestAnimationFrame(this.loopFn);
     const rawDt = Math.min((ts - this.lastTime) / 1000, 0.05);   // clamp dt so a tab-switch stall can't jump-cut the sim
     this.lastTime = ts;
+    if (this.state === STATE.TITLE && this.lastMusicState !== STATE.TITLE) this.music.play('title');
+    this.lastMusicState = this.state;
     const dt = rawDt * this.gameSpeed;   // gameSpeed-scaled dt for gameplay; rawDt (below) drives shake decay
 
     // NOTE: background.ts is the BG_FEATURES registry module (Task 12).

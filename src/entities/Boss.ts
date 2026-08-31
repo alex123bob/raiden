@@ -194,6 +194,7 @@ export function onBossDeath(ctx: GameContext): void {
     // More stages remain: brief stage-clear interlude, then the next stage.
     ctx.state = STATE.STAGECLEAR;
     ctx.stageClearTimer = 3.0;
+    ctx.music.play('stage-clear');
   } else {
     if (ctx.loopMult === 1) {
       // Beat the final stage on the first loop: show victory.
