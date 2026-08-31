@@ -9,8 +9,8 @@ export interface Track { key: string; tempo: number; loopBeats: number; layers: 
 
 /** Sink handed to the game as ctx.music. WebAudioMusic plays; SilentMusic is the test/no-audio no-op. */
 export interface MusicSink {
-  play(trackKey: string): void;   // crossfade to this track; no-op if already current
-  stop(): void;                   // fade out and stop scheduling
+  play(trackKey: string): void;   // switch to this track (no-op if already playing it)
+  stop(): void;                   // halt scheduling immediately
   setEnabled(enabled: boolean): void;
   setVolume(v: number): void;     // 0..1, music's share of master
 }
@@ -22,6 +22,11 @@ export function registerTrack(t: Track): void { TRACKS.set(t.key, t); }
 export function getTrack(key: string): Track | undefined { return TRACKS.get(key); }
 /** All registered track keys (for tests). */
 export function MUSIC_REGISTRY_KEYS(): string[] { return [...TRACKS.keys()]; }
+
+/** Map a 1-based stage number to one of the three cycling stage themes. */
+export function stageThemeFor(stage: number): string {
+  return ['stage-a', 'stage-b', 'stage-c'][((stage - 1) % 3 + 3) % 3];
+}
 
 /** No-op music sink for headless tests / when audio is unavailable. */
 export class SilentMusic implements MusicSink {
@@ -129,5 +134,79 @@ registerTrack({
         time: i, dur: 0.45, freq: f, type: 'square' as OscillatorType, gain: 0.08,
       })),
     },
+  ],
+});
+
+// Brighter major-key loop.
+registerTrack({
+  key: 'stage-b',
+  tempo: 140,
+  loopBeats: 8,
+  layers: [
+    { role: 'bass', notes: [0,1,2,3,4,5,6,7].map(b => ({
+      time: b, dur: 0.9, freq: b % 4 < 2 ? 130.81 : 98, type: 'triangle' as OscillatorType, gain: 0.18 })) },
+    { role: 'arp', notes: [261.63,329.63,392,523.25,392,329.63,293.66,329.63].map((f,i) => ({
+      time: i, dur: 0.45, freq: f, type: 'square' as OscillatorType, gain: 0.07 })) },
+  ],
+});
+
+// Darker, tenser loop.
+registerTrack({
+  key: 'stage-c',
+  tempo: 126,
+  loopBeats: 8,
+  layers: [
+    { role: 'bass', notes: [0,1,2,3,4,5,6,7].map(b => ({
+      time: b, dur: 0.9, freq: b % 2 === 0 ? 87.31 : 116.54, type: 'sawtooth' as OscillatorType, gain: 0.14 })) },
+    { role: 'arp', notes: [174.61,207.65,261.63,311.13,261.63,207.65,174.61,207.65].map((f,i) => ({
+      time: i, dur: 0.45, freq: f, type: 'triangle' as OscillatorType, gain: 0.08 })) },
+  ],
+});
+
+// Boss: faster, minor, insistent.
+registerTrack({
+  key: 'boss',
+  tempo: 158,
+  loopBeats: 8,
+  layers: [
+    { role: 'bass', notes: [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5].map(b => ({
+      time: b, dur: 0.4, freq: 82.41, type: 'sawtooth' as OscillatorType, gain: 0.16 })) },
+    { role: 'lead', notes: [329.63,392,440,392,329.63,392,440,493.88].map((f,i) => ({
+      time: i, dur: 0.8, freq: f, type: 'square' as OscillatorType, gain: 0.09 })) },
+  ],
+});
+
+// Title: slow, atmospheric.
+registerTrack({
+  key: 'title',
+  tempo: 96,
+  loopBeats: 8,
+  layers: [
+    { role: 'bass', notes: [0,2,4,6].map(b => ({
+      time: b, dur: 1.8, freq: 110, type: 'triangle' as OscillatorType, gain: 0.14 })) },
+    { role: 'lead', notes: [0,2,4,6].map((b,i) => ({
+      time: b, dur: 1.6, freq: [329.63,392,293.66,440][i], type: 'sine' as OscillatorType, gain: 0.10 })) },
+  ],
+});
+
+// Stage-clear: short triumphant motif (loops harmlessly until the state changes).
+registerTrack({
+  key: 'stage-clear',
+  tempo: 150,
+  loopBeats: 4,
+  layers: [
+    { role: 'lead', notes: [261.63,329.63,392,523.25].map((f,i) => ({
+      time: i * 0.75, dur: 0.7, freq: f, type: 'square' as OscillatorType, gain: 0.12 })) },
+  ],
+});
+
+// Game-over: short descending minor motif.
+registerTrack({
+  key: 'game-over',
+  tempo: 84,
+  loopBeats: 4,
+  layers: [
+    { role: 'lead', notes: [329.63,293.66,246.94,196].map((f,i) => ({
+      time: i * 0.9, dur: 0.85, freq: f, type: 'triangle' as OscillatorType, gain: 0.12 })) },
   ],
 });

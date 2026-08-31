@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SilentMusic, WebAudioMusic, MUSIC_REGISTRY_KEYS, getTrack } from '../src/core/music.js';
+import { SilentMusic, WebAudioMusic, MUSIC_REGISTRY_KEYS, getTrack, stageThemeFor } from '../src/core/music.js';
 
 describe('music engine', () => {
   it('registers the stage-a track', () => {
@@ -23,5 +23,29 @@ describe('music engine', () => {
   it('WebAudioMusic.play with an unknown track key does not throw', () => {
     const m = new WebAudioMusic();
     expect(() => m.play('does-not-exist')).not.toThrow();
+  });
+});
+
+describe('music tracks and stage mapping', () => {
+  it('registers all authored tracks', () => {
+    const keys = MUSIC_REGISTRY_KEYS();
+    for (const k of ['stage-a', 'stage-b', 'stage-c', 'boss', 'title', 'stage-clear', 'game-over']) {
+      expect(keys, `missing ${k}`).toContain(k);
+    }
+  });
+
+  it('every stage 1..18 maps to a registered stage theme', () => {
+    for (let s = 1; s <= 18; s++) {
+      const key = stageThemeFor(s);
+      expect(['stage-a', 'stage-b', 'stage-c']).toContain(key);
+      expect(getTrack(key), `stage ${s} theme ${key}`).toBeDefined();
+    }
+  });
+
+  it('cycles the three themes across consecutive stages', () => {
+    expect(stageThemeFor(1)).toBe('stage-a');
+    expect(stageThemeFor(2)).toBe('stage-b');
+    expect(stageThemeFor(3)).toBe('stage-c');
+    expect(stageThemeFor(4)).toBe('stage-a');
   });
 });
