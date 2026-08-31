@@ -1,8 +1,8 @@
-import { W, H, STATE } from '../config.js';
+import { W, H, STATE, VOLUME_STEPS } from '../config.js';
 import { ctx } from '../canvas.js';
 import type { GameContext } from './GameContext.js';
 import { CanvasRenderer, type RenderContext } from './Renderer.js';
-import { WebAudioBus, type AudioBus } from './audio.js';
+import { WebAudioBus, setMasterVolume, type AudioBus } from './audio.js';
 import { WebAudioMusic, stageThemeFor, type MusicSink } from './music.js';
 import { isTouch } from './input.js';
 import { diffMultFor, densityForStage } from './difficulty.js';
@@ -43,8 +43,9 @@ export class Game implements GameContext {
   settingsOpen = false;            // true while the settings overlay is showing
   soundOn = true;                  // mute toggle mirrored into `audio`
   gameSpeed = 1.0;                 // global time multiplier from SPEED_STEPS (settings)
+  volume = 0.7;                    // master volume (0..1), persisted
   score = 0;                       // current run's score
-  highScore = parseInt(localStorage.getItem('raidenHS') || '0');   // persisted best score
+  highScore = (() => { try { return parseInt(localStorage.getItem('raidenHS') || '0'); } catch { return 0; } })();   // persisted best score
   keys: Record<string, boolean> = {};       // held-key map by KeyboardEvent.code
   moveVec = { x: 0, y: 0 };                 // analog move input from the touch stick, each axis -1..1
   player: Player | null = null;             // the ship, or null before spawn
@@ -75,15 +76,18 @@ export class Game implements GameContext {
   readonly renderer: RenderContext;   // drawing surface (CanvasRenderer, or a test stub)
   readonly audio: AudioBus;           // sound effect sink (WebAudioBus, or SilentBus in tests)
   readonly music: MusicSink;          // background music sink
-  private lastMusicState = -1;        // last STATE.* value seen by loop(), for the TITLE music guard
+  private lastMusicState = -1;        // last STATE.* value seen by loop(), drives the music state machine
   private loopFn: (ts: number) => void;   // bound loop() reference, so each rAF request reuses the same closure
 
   constructor(deps: GameDeps = {}) {
     this.renderer = deps.renderer ?? new CanvasRenderer(ctx);
     this.audio = deps.audio ?? new WebAudioBus();
+    this.loadSettings();
+    setMasterVolume(this.volume);
     this.audio.setEnabled(this.soundOn);
     this.music = deps.music ?? new WebAudioMusic();
     this.music.setEnabled(this.soundOn);
+    this.music.setVolume(1.0);     // music sits under SFX via its own internal balance; master scales both
     this.loopFn = (ts) => this.loop(ts);
   }
 
@@ -92,6 +96,39 @@ export class Game implements GameContext {
     this.soundOn = !this.soundOn;
     this.audio.setEnabled(this.soundOn);
     this.music.setEnabled(this.soundOn);
+    this.saveSettings();
+  }
+
+  /** Read persisted settings from localStorage into soundOn/volume/gameSpeed (best-effort). */
+  loadSettings(): void {
+    try {
+      const raw = localStorage.getItem('raidenSettings');
+      if (!raw) return;
+      const s = JSON.parse(raw) as { soundOn?: boolean; volume?: number; gameSpeed?: number };
+      if (typeof s.soundOn === 'boolean') this.soundOn = s.soundOn;
+      if (typeof s.volume === 'number') this.volume = Math.max(0, Math.min(1, s.volume));
+      if (typeof s.gameSpeed === 'number') this.gameSpeed = s.gameSpeed;
+    } catch { /* ignore corrupt/absent storage */ }
+  }
+
+  /** Persist soundOn/volume/gameSpeed to localStorage (best-effort). */
+  saveSettings(): void {
+    try {
+      localStorage.setItem('raidenSettings', JSON.stringify({
+        soundOn: this.soundOn, volume: this.volume, gameSpeed: this.gameSpeed,
+      }));
+    } catch { /* ignore quota/unavailable */ }
+  }
+
+  /** Step master volume through VOLUME_STEPS, apply it, and persist. */
+  cycleVolume(dir: number): void {
+    // Snap to the nearest step, then move by dir.
+    let i = VOLUME_STEPS.indexOf(this.volume);
+    if (i === -1) { i = VOLUME_STEPS.findIndex(v => v >= this.volume); if (i === -1) i = VOLUME_STEPS.length - 1; }
+    i = Math.max(0, Math.min(VOLUME_STEPS.length - 1, i + dir));
+    this.volume = VOLUME_STEPS[i];
+    setMasterVolume(this.volume);
+    this.saveSettings();
   }
 
   /** Cue the game-over music sting. Called when the final life is lost. */
@@ -171,8 +208,15 @@ export class Game implements GameContext {
     requestAnimationFrame(this.loopFn);
     const rawDt = Math.min((ts - this.lastTime) / 1000, 0.05);   // clamp dt so a tab-switch stall can't jump-cut the sim
     this.lastTime = ts;
-    if (this.state === STATE.TITLE && this.lastMusicState !== STATE.TITLE) this.music.play('title');
-    this.lastMusicState = this.state;
+    // Music state machine: title theme on TITLE; pause silences; resume restores stage/boss theme.
+    if (this.state !== this.lastMusicState) {
+      if (this.state === STATE.TITLE) this.music.play('title');
+      else if (this.state === STATE.PAUSED) this.music.stop();
+      else if (this.state === STATE.PLAYING && this.lastMusicState === STATE.PAUSED) {
+        this.music.play(this.boss ? 'boss' : stageThemeFor(this.currentStage));
+      }
+      this.lastMusicState = this.state;
+    }
     const dt = rawDt * this.gameSpeed;   // gameSpeed-scaled dt for gameplay; rawDt (below) drives shake decay
 
     // NOTE: background.ts is the BG_FEATURES registry module (Task 12).

@@ -1,6 +1,6 @@
 import { W, H, STATE, SPEED_STEPS, STAGE_COUNT } from '../config.js';
 import { canvas, ctx } from '../canvas.js';
-import { getAudio } from './audio.js';
+import { getAudio, setMasterVolume } from './audio.js';
 import type { Game } from './Game.js';
 
 // === INPUT ===
@@ -33,6 +33,7 @@ function handleKeyPress(g: Game, code: string) {
     }
     if (code === 'BracketLeft') cycleSpeed(g, -1);
     if (code === 'BracketRight')cycleSpeed(g, 1);
+    if (code === 'KeyV')        cycleVolumeWrap(g);
     if (code === 'KeyS')        g.settingsOpen = false;
     return;
   }
@@ -80,6 +81,13 @@ function cycleSpeed(g: Game, dir: number) {
   let i = SPEED_STEPS.indexOf(g.gameSpeed);
   i = Math.max(0, Math.min(SPEED_STEPS.length - 1, i + dir));
   g.gameSpeed = SPEED_STEPS[i];
+  g.saveSettings();
+}
+
+/** Step volume up one notch, wrapping back to the quietest after the loudest. */
+function cycleVolumeWrap(g: Game) {
+  if (g.volume >= 1) { g.volume = 0; setMasterVolume(0); g.saveSettings(); }
+  else g.cycleVolume(1);
 }
 
 // === TOUCH CONTROLS (mobile) ===
@@ -131,9 +139,10 @@ function within(p: { x: number; y: number }, c: { x: number; y: number; r: numbe
 function touchDiscrete(p: { x: number; y: number }, g: Game) {
   if (g.settingsOpen) {
     // Hand-tuned hit bands matching the settings panel's drawn layout (see screens.ts drawSettings).
-    const bx = W/2 - 130, by = H/2 - 90, bw = 260, bh = 185;
+    const bx = W/2 - 130, by = H/2 - 90, bw = 260, bh = 210;
     if (p.y > by + 55 && p.y < by + 80) { handleKeyPress(g, 'KeyM'); return true; }
-    if (p.y > by + 80 && p.y < by + 105) { cycleSpeed(g, p.x < W/2 ? -1 : 1); return true; }
+    if (p.y > by + 80 && p.y < by + 104) { cycleSpeed(g, p.x < W/2 ? -1 : 1); return true; }
+    if (p.y > by + 104 && p.y < by + 128) { cycleVolumeWrap(g); return true; }
     if (p.x < bx || p.x > bx + bw || p.y < by || p.y > by + bh) g.settingsOpen = false;   // tap outside closes it
     return true;  // swallow all taps while settings is open
   }

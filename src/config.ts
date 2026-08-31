@@ -15,6 +15,8 @@ export const CHARGE_DURATION = 1.0;
 export const STAGE_COUNT = 18;
 /** Selectable game-speed multipliers (slow / normal / fast) cycled in settings. */
 export const SPEED_STEPS = [0.75, 1.0, 1.25];
+/** Selectable master-volume levels cycled in settings. */
+export const VOLUME_STEPS = [0, 0.25, 0.5, 0.7, 1.0];
 /** Enum of top-level game states; the loop switches behavior/rendering on these. */
 export const STATE = { TITLE: 0, PLAYING: 1, PAUSED: 2, GAMEOVER: 3, STAGECLEAR: 4, VICTORY: 5, STAGESELECT: 6 };
 /** Build version string, logged at startup and shown on screens. */
