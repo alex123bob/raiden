@@ -35,6 +35,7 @@ export function stubContext(overrides: Partial<GameContext> = {}): GameContext {
     music: new SilentMusic(),
     spawnParticles(kind, x, y, opts) { spawnParticleKind(kind, x, y, opts ?? {}, ctx); },
     shake() {},
+    hitStop() {},
     vibrate() {},
     saveHS() {},
     startStage() {},

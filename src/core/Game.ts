@@ -71,6 +71,7 @@ export class Game implements GameContext {
   victoryTimer = 0;                // countdown (s) used by the VICTORY sequence (currently unused by updateVictory)
   lastTime = 0;                    // rAF timestamp (ms) of the previous frame, for computing dt
   shakeTime = 0;                   // remaining seconds of the current screen shake (0 = none active)
+  hitStopTimer = 0;                // seconds of gameplay freeze remaining (rendering continues)
   shakeDur = 0;                    // total duration (s) of the current shake, for computing decay fraction
   shakeMag = 0;                    // peak amplitude (px) of the current shake
   readonly renderer: RenderContext;   // drawing surface (CanvasRenderer, or a test stub)
@@ -182,6 +183,11 @@ export class Game implements GameContext {
     this.shakeTime = Math.max(this.shakeTime, dur);
   }
 
+  /** GameContext hook: freeze gameplay for `ms` ms; takes the longer of any overlapping freeze. */
+  hitStop(ms: number): void {
+    this.hitStopTimer = Math.max(this.hitStopTimer, ms / 1000);
+  }
+
   /** GameContext hook: haptic buzz on touch devices that support the Vibration API (Android; iOS haptics are driven by the real switch overlay in input.ts instead — see there). */
   vibrate(ms: number): void {
     if (isTouch && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(ms);
@@ -217,7 +223,11 @@ export class Game implements GameContext {
       }
       this.lastMusicState = this.state;
     }
-    const dt = rawDt * this.gameSpeed;   // gameSpeed-scaled dt for gameplay; rawDt (below) drives shake decay
+    let dt = rawDt * this.gameSpeed;   // gameSpeed-scaled dt for gameplay; rawDt (below) drives shake decay
+    if (this.hitStopTimer > 0) {
+      this.hitStopTimer = Math.max(0, this.hitStopTimer - rawDt);   // decays on real time
+      dt = 0;                                                        // freeze gameplay this frame
+    }
 
     // NOTE: background.ts is the BG_FEATURES registry module (Task 12).
     if (this.state !== STATE.PAUSED) updateStars(dt, this);

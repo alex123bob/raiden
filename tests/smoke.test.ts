@@ -45,6 +45,9 @@ describe('game smoke test (real module graph, stubbed DOM)', () => {
     game.loop(ts += 1000 / 60);
     expect(game.state).toBe(4);
     game.stageClearTimer = 0.001;
+    // Boss death triggers a brief hit-stop (~110ms); drain it before the
+    // stage-clear countdown (which runs on the frozen gameplay dt) can elapse.
+    while (game.hitStopTimer > 0) game.loop(ts += 1000 / 60);
     game.loop(ts += 1000 / 60);
     expect(game.state).toBe(1);
     expect(game.currentStage).toBe(2);

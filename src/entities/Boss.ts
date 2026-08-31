@@ -38,6 +38,8 @@ export class Boss extends Entity {
   minionTimer: number;
   /** Render opacity [0..1]; kind-specific hook may fade the boss (e.g. phantom). */
   phantomAlpha = 1.0;
+  /** Last frame's phase index, to detect phase-break for hit-stop. */
+  private prevPhase = 0;
   constructor(public readonly def: BossType, stage: number, ctx: GameContext) {
     // Enter at top-center; radius from def or a 50px default.
     super(W / 2, 130, def.r ?? 50);
@@ -76,6 +78,8 @@ export class Boss extends Entity {
     const hpPct = this.hp / this.maxHp;
     ctx.bossPhase = this.phaseCount - 1 - Math.floor(hpPct * this.phaseCount);
     ctx.bossPhase = Math.max(0, Math.min(this.phaseCount - 1, ctx.bossPhase));
+    if (ctx.bossPhase > this.prevPhase) ctx.hitStop(70);
+    this.prevPhase = ctx.bossPhase;
 
     this.def.onUpdate?.(this, dt, ctx);  // optional kind-specific per-frame hook
 
@@ -173,6 +177,7 @@ export function createBoss(ctx: GameContext): Boss {
  */
 export function onBossDeath(ctx: GameContext): void {
   const boss = ctx.boss!;
+  ctx.hitStop(110);
   const bossStage = boss.stageNum || 1;
   // 3 fixed explosions plus a few extra scattered ones on later stages.
   const explosionCount = 2 + Math.floor(bossStage * 0.5);

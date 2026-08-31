@@ -46,6 +46,8 @@ export interface GameContext {
   spawnParticles(kind: string, x: number, y: number, opts?: Record<string, unknown>): void;
   /** Trigger screen shake: `mag` amplitude in px, `dur` duration in seconds. */
   shake(mag: number, dur: number): void;
+  /** Freeze gameplay (dt=0) for `ms` milliseconds while rendering continues; extends any active freeze. */
+  hitStop(ms: number): void;
   /** Trigger a haptic buzz for `ms` milliseconds on touch devices that support it; no-op elsewhere. */
   vibrate(ms: number): void;
   /** Persist the high score if the current score beats it. */
