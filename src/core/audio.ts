@@ -240,3 +240,19 @@ registerSfx({
     sirenOsc.start(t0); sirenOsc.stop(t0 + 0.75);
   },
 });
+
+registerSfx({
+  key: 'graze',
+  play(ac) {
+    // Soft, very short high tick.
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    const out = outputNode() ?? ac.destination;
+    osc.connect(gain); gain.connect(out);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1800, ac.currentTime);
+    gain.gain.setValueAtTime(0.05, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.05);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.06);
+  },
+});

@@ -3,8 +3,8 @@ import { SilentBus, WebAudioBus, getAudio, setMasterVolume, getMasterVolume } fr
 import { SFX_REGISTRY_KEYS } from '../src/core/audio.js';
 
 describe('audio bus', () => {
-  it('registers the four engine sound effects', () => {
-    expect(SFX_REGISTRY_KEYS().sort()).toEqual(['shoot', 'explosion', 'powerup', 'bomb'].sort());
+  it('registers the engine sound effects including graze', () => {
+    expect(SFX_REGISTRY_KEYS().sort()).toEqual(['shoot', 'explosion', 'powerup', 'bomb', 'graze'].sort());
   });
 
   it('SilentBus never throws and ignores everything', () => {
