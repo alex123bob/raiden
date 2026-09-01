@@ -1,8 +1,9 @@
-import { W, H, STATE } from '../config.js';
+import { W, H, STATE, VOLUME_STEPS } from '../config.js';
 import { ctx } from '../canvas.js';
 import type { GameContext } from './GameContext.js';
 import { CanvasRenderer, type RenderContext } from './Renderer.js';
-import { WebAudioBus, type AudioBus } from './audio.js';
+import { WebAudioBus, setMasterVolume, type AudioBus } from './audio.js';
+import { WebAudioMusic, stageThemeFor, type MusicSink } from './music.js';
 import { isTouch } from './input.js';
 import { diffMultFor, densityForStage } from './difficulty.js';
 import { initBackground, updateStars, drawStars, updateBackground, drawBackground } from '../stages/background.js';
@@ -28,6 +29,7 @@ import { drawTouchControls } from './input.js';
 export interface GameDeps {
   renderer?: RenderContext;
   audio?: AudioBus;
+  music?: MusicSink;
 }
 
 /**
@@ -41,8 +43,9 @@ export class Game implements GameContext {
   settingsOpen = false;            // true while the settings overlay is showing
   soundOn = true;                  // mute toggle mirrored into `audio`
   gameSpeed = 1.0;                 // global time multiplier from SPEED_STEPS (settings)
+  volume = 0.7;                    // master volume (0..1), persisted
   score = 0;                       // current run's score
-  highScore = parseInt(localStorage.getItem('raidenHS') || '0');   // persisted best score
+  highScore = (() => { try { return parseInt(localStorage.getItem('raidenHS') || '0'); } catch { return 0; } })();   // persisted best score
   keys: Record<string, boolean> = {};       // held-key map by KeyboardEvent.code
   moveVec = { x: 0, y: 0 };                 // analog move input from the touch stick, each axis -1..1
   player: Player | null = null;             // the ship, or null before spawn
@@ -68,16 +71,24 @@ export class Game implements GameContext {
   victoryTimer = 0;                // countdown (s) used by the VICTORY sequence (currently unused by updateVictory)
   lastTime = 0;                    // rAF timestamp (ms) of the previous frame, for computing dt
   shakeTime = 0;                   // remaining seconds of the current screen shake (0 = none active)
+  hitStopTimer = 0;                // seconds of gameplay freeze remaining (rendering continues)
   shakeDur = 0;                    // total duration (s) of the current shake, for computing decay fraction
   shakeMag = 0;                    // peak amplitude (px) of the current shake
   readonly renderer: RenderContext;   // drawing surface (CanvasRenderer, or a test stub)
   readonly audio: AudioBus;           // sound effect sink (WebAudioBus, or SilentBus in tests)
+  readonly music: MusicSink;          // background music sink
+  private lastMusicState = -1;        // last STATE.* value seen by loop(), drives the music state machine
   private loopFn: (ts: number) => void;   // bound loop() reference, so each rAF request reuses the same closure
 
   constructor(deps: GameDeps = {}) {
     this.renderer = deps.renderer ?? new CanvasRenderer(ctx);
     this.audio = deps.audio ?? new WebAudioBus();
+    this.loadSettings();
+    setMasterVolume(this.volume);
     this.audio.setEnabled(this.soundOn);
+    this.music = deps.music ?? new WebAudioMusic();
+    this.music.setEnabled(this.soundOn);
+    this.music.setVolume(1.0);     // music sits under SFX via its own internal balance; master scales both
     this.loopFn = (ts) => this.loop(ts);
   }
 
@@ -85,13 +96,52 @@ export class Game implements GameContext {
   toggleSound(): void {
     this.soundOn = !this.soundOn;
     this.audio.setEnabled(this.soundOn);
+    this.music.setEnabled(this.soundOn);
+    this.saveSettings();
   }
+
+  /** Read persisted settings from localStorage into soundOn/volume/gameSpeed (best-effort). */
+  loadSettings(): void {
+    try {
+      const raw = localStorage.getItem('raidenSettings');
+      if (!raw) return;
+      const s = JSON.parse(raw) as { soundOn?: boolean; volume?: number; gameSpeed?: number };
+      if (typeof s.soundOn === 'boolean') this.soundOn = s.soundOn;
+      if (typeof s.volume === 'number') this.volume = Math.max(0, Math.min(1, s.volume));
+      if (typeof s.gameSpeed === 'number') this.gameSpeed = Math.max(0.75, Math.min(1.25, s.gameSpeed));
+    } catch { /* ignore corrupt/absent storage */ }
+  }
+
+  /** Persist soundOn/volume/gameSpeed to localStorage (best-effort). */
+  saveSettings(): void {
+    try {
+      localStorage.setItem('raidenSettings', JSON.stringify({
+        soundOn: this.soundOn, volume: this.volume, gameSpeed: this.gameSpeed,
+      }));
+    } catch { /* ignore quota/unavailable */ }
+  }
+
+  /** Step master volume through VOLUME_STEPS, apply it, and persist. */
+  cycleVolume(dir: number): void {
+    // Snap to the nearest step, then move by dir.
+    let i = VOLUME_STEPS.indexOf(this.volume);
+    if (i === -1) { i = VOLUME_STEPS.findIndex(v => v >= this.volume); if (i === -1) i = VOLUME_STEPS.length - 1; }
+    i = Math.max(0, Math.min(VOLUME_STEPS.length - 1, i + dir));
+    this.volume = VOLUME_STEPS[i];
+    setMasterVolume(this.volume);
+    this.saveSettings();
+  }
+
+  /** Cue the game-over music sting. Called when the final life is lost. */
+  onGameOver(): void { this.music.play('game-over'); }
 
   /** Persist the current score as the new high score if it beats the stored one. */
   saveHS(): void {
     if (this.score > this.highScore) {
       this.highScore = this.score;
-      localStorage.setItem('raidenHS', String(this.highScore));
+      try {
+        localStorage.setItem('raidenHS', String(this.highScore));
+      } catch { /* ignore quota/unavailable */ }
     }
   }
 
@@ -108,6 +158,7 @@ export class Game implements GameContext {
   /** Reset per-stage state and begin stage `n` (1-based): rebuild difficulty, background, and wave table. */
   startStage(stage: number): void {
     this.currentStage = stage;
+    this.music.play(stageThemeFor(stage));
     this.diffMult = diffMultFor(stage, this.loopMult);
     initBackground(stage, this);
     this.waveTable = buildWaveTable(STAGES[stage - 1], this.diffMult, densityForStage(stage));
@@ -132,6 +183,11 @@ export class Game implements GameContext {
     this.shakeMag = Math.max(this.shakeMag, mag);
     this.shakeDur = Math.max(this.shakeDur, dur);
     this.shakeTime = Math.max(this.shakeTime, dur);
+  }
+
+  /** GameContext hook: freeze gameplay for `ms` ms; takes the longer of any overlapping freeze. */
+  hitStop(ms: number): void {
+    this.hitStopTimer = Math.max(this.hitStopTimer, ms / 1000);
   }
 
   /** GameContext hook: haptic buzz on touch devices that support the Vibration API (Android; iOS haptics are driven by the real switch overlay in input.ts instead — see there). */
@@ -160,7 +216,20 @@ export class Game implements GameContext {
     requestAnimationFrame(this.loopFn);
     const rawDt = Math.min((ts - this.lastTime) / 1000, 0.05);   // clamp dt so a tab-switch stall can't jump-cut the sim
     this.lastTime = ts;
-    const dt = rawDt * this.gameSpeed;   // gameSpeed-scaled dt for gameplay; rawDt (below) drives shake decay
+    // Music state machine: title theme on TITLE; pause silences; resume restores stage/boss theme.
+    if (this.state !== this.lastMusicState) {
+      if (this.state === STATE.TITLE) this.music.play('title');
+      else if (this.state === STATE.PAUSED) this.music.stop();
+      else if (this.state === STATE.PLAYING && this.lastMusicState === STATE.PAUSED) {
+        this.music.play(this.boss ? 'boss' : stageThemeFor(this.currentStage));
+      }
+      this.lastMusicState = this.state;
+    }
+    let dt = rawDt * this.gameSpeed;   // gameSpeed-scaled dt for gameplay; rawDt (below) drives shake decay
+    if (this.hitStopTimer > 0) {
+      this.hitStopTimer = Math.max(0, this.hitStopTimer - rawDt);   // decays on real time
+      dt = 0;                                                        // freeze gameplay this frame
+    }
 
     // NOTE: background.ts is the BG_FEATURES registry module (Task 12).
     if (this.state !== STATE.PAUSED) updateStars(dt, this);

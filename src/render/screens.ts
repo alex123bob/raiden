@@ -94,10 +94,10 @@ export function drawPause(g: Game) {
   ctx.fillText('P to resume', W/2, H/2 + 24);
 }
 
-/** Settings panel: a centered box showing sound toggle and speed setting, with key hints. */
+/** Settings panel: a centered box showing sound toggle, speed, and volume settings, with key hints. */
 export function drawSettings(g: Game) {
   // Panel geometry (touch input.ts's touchDiscrete hit-tests mirror these bands).
-  const bx = W/2 - 130, by = H/2 - 90, bw = 260, bh = 185;
+  const bx = W/2 - 130, by = H/2 - 90, bw = 260, bh = 210;
   ctx.fillStyle = 'rgba(0,10,30,0.94)';
   ctx.fillRect(bx, by, bw, bh);
   ctx.strokeStyle = '#4488ff';
@@ -113,11 +113,12 @@ export function drawSettings(g: Game) {
   ctx.fillStyle = '#aaaaff';
   ctx.fillText('M  Sound: ' + (g.soundOn ? 'ON ' : 'OFF'), W/2, by + 68);
   ctx.fillText('[  Speed: ' + g.gameSpeed.toFixed(2) + 'x  ]', W/2, by + 92);
+  ctx.fillText('V  Volume: ' + Math.round(g.volume * 100) + '%', W/2, by + 116);
 
   ctx.fillStyle = '#666';
   ctx.font = '11px monospace';
-  ctx.fillText('M = toggle sound   [ / ] = speed', W/2, by + 130);
-  ctx.fillText('S to close', W/2, by + 150);
+  ctx.fillText('M sound   [ / ] speed   V volume', W/2, by + 154);
+  ctx.fillText('S to close', W/2, by + 174);
 }
 
 /** Game-over screen: dark scrim, "GAME OVER", final score/hi-score, and the continue/share hint. */

@@ -14,6 +14,10 @@ export function circleHit(ax: number, ay: number, ar: number, bx: number, by: nu
   return dx*dx + dy*dy < (ar + br) * (ar + br);
 }
 
+/** Bullets passing within this many px beyond the player's hit radius count as a graze. */
+export const GRAZE_RADIUS = 14;
+let lastGrazeSfx = 0;   // wall-clock ms of the last graze tick, to rate-limit the sound
+
 /**
  * Player bullets vs regular enemies. Applies damage, spawns a small hit-flash
  * for lv5 vulcan hits, removes non-piercing bullets on impact, and on kill:
@@ -43,6 +47,27 @@ export function checkPlayerBulletsVsEnemies(ctx: GameContext) {
       ctx.spawnParticles('explosion', e.x, e.y, { size: SIZE_BY_KEY[e.def.key] ?? 1, color: e.color });
       tryDropPowerup(e, ctx);
       ctx.enemies.splice(i, 1);
+    }
+  }
+}
+
+/**
+ * Enemy bullets skimming the player (inside GRAZE_RADIUS but not colliding):
+ * flag each once, emit a spark, and play a rate-limited tick. No scoring yet.
+ */
+export function checkGraze(ctx: GameContext) {
+  const p = ctx.player;
+  if (!p || p.dead || p.invTimer > 0) return;
+  const grazeR = p.r + GRAZE_RADIUS;
+  for (const b of ctx.enemyBullets) {
+    if (b.grazed) continue;
+    const inGraze = circleHit(b.x, b.y, b.r, p.x, p.y, grazeR);
+    const isHit = circleHit(b.x, b.y, b.r, p.x, p.y, p.r);
+    if (inGraze && !isHit) {
+      b.grazed = true;
+      ctx.spawnParticles('explosion', b.x, b.y, { size: 0.35, color: '#aef0ff' });
+      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      if (now - lastGrazeSfx > 70) { ctx.audio.play('graze'); lastGrazeSfx = now; }
     }
   }
 }
@@ -109,6 +134,7 @@ export function checkBossBodyVsPlayer(ctx: GameContext) {
 /** Run every collision pass for the frame, in a fixed order. Called once per frame from Game.loop. */
 export function runCollision(ctx: GameContext) {
   checkPlayerBulletsVsEnemies(ctx);
+  checkGraze(ctx);
   checkEnemyBulletsVsPlayer(ctx);
   checkEnemyBodiesVsPlayer(ctx);
   checkPlayerBulletsVsBoss(ctx);

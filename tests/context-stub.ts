@@ -1,6 +1,7 @@
 import type { GameContext } from '../src/core/GameContext.js';
 import type { WaveEntry } from '../src/stages/waveGen.js';
 import { SilentBus } from '../src/core/audio.js';
+import { SilentMusic } from '../src/core/music.js';
 import { Player } from '../src/entities/Player.js';
 import { spawnParticleKind } from '../src/entities/Particle.js';
 
@@ -31,8 +32,10 @@ export function stubContext(overrides: Partial<GameContext> = {}): GameContext {
     victoryTimer: 0,
     score: 0,
     audio: new SilentBus(),
+    music: new SilentMusic(),
     spawnParticles(kind, x, y, opts) { spawnParticleKind(kind, x, y, opts ?? {}, ctx); },
     shake() {},
+    hitStop() {},
     vibrate() {},
     saveHS() {},
     startStage() {},

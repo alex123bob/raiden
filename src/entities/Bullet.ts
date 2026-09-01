@@ -55,6 +55,8 @@ export class Bullet extends Entity {
   delay = 0;
   /** True for enemy bullets (simpler update, hits player); false for player bullets. */
   isEnemy = false;
+  /** True once this (enemy) bullet has already awarded a graze (so it grazes at most once). */
+  grazed = false;
   constructor(public readonly def: BulletKind, x: number, y: number, vx: number, vy: number) {
     super(x, y, def.r);
     this.vx = vx;
