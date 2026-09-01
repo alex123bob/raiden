@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SilentBus, WebAudioBus, getAudio, setMasterVolume, getMasterVolume } from '../src/core/audio.js';
+import { SilentBus, WebAudioBus, getAudio, setMasterVolume, getMasterVolume, getMasterGain } from '../src/core/audio.js';
 import { SFX_REGISTRY_KEYS } from '../src/core/audio.js';
 
 describe('audio bus', () => {
@@ -32,6 +32,6 @@ describe('master volume', () => {
 
   it('WebAudioBus.setVolume and getMasterGain never throw without an AudioContext', () => {
     const bus = new WebAudioBus();
-    expect(() => bus.setVolume(0.3)).not.toThrow();
+    expect(() => { bus.setVolume(0.3); getMasterGain(); }).not.toThrow();
   });
 });

@@ -60,11 +60,11 @@ export function checkGraze(ctx: GameContext) {
   if (!p || p.dead || p.invTimer > 0) return;
   const grazeR = p.r + GRAZE_RADIUS;
   for (const b of ctx.enemyBullets) {
-    if ((b as { grazed?: boolean }).grazed) continue;
+    if (b.grazed) continue;
     const inGraze = circleHit(b.x, b.y, b.r, p.x, p.y, grazeR);
     const isHit = circleHit(b.x, b.y, b.r, p.x, p.y, p.r);
     if (inGraze && !isHit) {
-      (b as { grazed?: boolean }).grazed = true;
+      b.grazed = true;
       ctx.spawnParticles('explosion', b.x, b.y, { size: 0.35, color: '#aef0ff' });
       const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
       if (now - lastGrazeSfx > 70) { ctx.audio.play('graze'); lastGrazeSfx = now; }

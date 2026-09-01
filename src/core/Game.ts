@@ -108,7 +108,7 @@ export class Game implements GameContext {
       const s = JSON.parse(raw) as { soundOn?: boolean; volume?: number; gameSpeed?: number };
       if (typeof s.soundOn === 'boolean') this.soundOn = s.soundOn;
       if (typeof s.volume === 'number') this.volume = Math.max(0, Math.min(1, s.volume));
-      if (typeof s.gameSpeed === 'number') this.gameSpeed = s.gameSpeed;
+      if (typeof s.gameSpeed === 'number') this.gameSpeed = Math.max(0.75, Math.min(1.25, s.gameSpeed));
     } catch { /* ignore corrupt/absent storage */ }
   }
 
@@ -139,7 +139,9 @@ export class Game implements GameContext {
   saveHS(): void {
     if (this.score > this.highScore) {
       this.highScore = this.score;
-      localStorage.setItem('raidenHS', String(this.highScore));
+      try {
+        localStorage.setItem('raidenHS', String(this.highScore));
+      } catch { /* ignore quota/unavailable */ }
     }
   }
 
