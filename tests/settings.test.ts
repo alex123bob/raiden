@@ -30,11 +30,36 @@ describe('settings persistence', () => {
   });
 
   it('loadSettings restores persisted values', () => {
-    store['raidenSettings'] = JSON.stringify({ soundOn: false, volume: 0.25, gameSpeed: 1.25 });
+    store['raidenSettings'] = JSON.stringify({ soundOn: false, volume: 0.25, gameSpeed: 1.25, reducedMotion: true });
     const g = newGame();
     expect(g.soundOn).toBe(false);
     expect(g.volume).toBe(0.25);
     expect(g.gameSpeed).toBe(1.25);
+    expect(g.reducedMotion).toBe(true);
+  });
+
+  it('toggleReducedMotion persists and clears active shake', () => {
+    const g = newGame();
+    g.shake(12, 0.4);
+    expect(g.shakeTime).toBeGreaterThan(0);
+
+    g.toggleReducedMotion();
+    expect(g.reducedMotion).toBe(true);
+    expect(g.shakeTime).toBe(0);
+    expect(g.shakeDur).toBe(0);
+    expect(g.shakeMag).toBe(0);
+    expect(JSON.parse(store['raidenSettings']).reducedMotion).toBe(true);
+  });
+
+  it('reduced motion suppresses shake and clamps hit-stop', () => {
+    const g = newGame();
+    g.reducedMotion = true;
+
+    g.shake(14, 0.5);
+    expect(g.shakeTime).toBe(0);
+
+    g.hitStop(110);
+    expect(g.hitStopTimer).toBeCloseTo(0.03, 5);
   });
 
   it('saveSettings never throws when localStorage is unavailable', () => {

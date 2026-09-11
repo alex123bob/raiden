@@ -57,6 +57,7 @@ export class Game implements GameContext {
   soundOn = true;                  // mute toggle mirrored into `audio`
   gameSpeed = 1.0;                 // global time multiplier from SPEED_STEPS (settings)
   volume = 0.7;                    // master volume (0..1), persisted
+  reducedMotion = false;           // accessibility comfort toggle; suppresses shake/haptics and softens hit-stop
   score = 0;                       // current run's score
   leaderboard: LeaderboardEntry[] = loadLeaderboard(); // local top-10 scores with initials
   highScore = loadHighScore(this.leaderboard);   // persisted best score, compatible with legacy raidenHS
@@ -121,23 +122,36 @@ export class Game implements GameContext {
     this.saveSettings();
   }
 
-  /** Read persisted settings from localStorage into soundOn/volume/gameSpeed (best-effort). */
+  /** Flip reduced-motion mode and clear active motion effects immediately. */
+  toggleReducedMotion(): void {
+    this.reducedMotion = !this.reducedMotion;
+    if (this.reducedMotion) {
+      this.shakeTime = 0;
+      this.shakeDur = 0;
+      this.shakeMag = 0;
+      this.hitStopTimer = Math.min(this.hitStopTimer, 0.03);
+    }
+    this.saveSettings();
+  }
+
+  /** Read persisted settings from localStorage into soundOn/volume/gameSpeed/reducedMotion (best-effort). */
   loadSettings(): void {
     try {
       const raw = localStorage.getItem('raidenSettings');
       if (!raw) return;
-      const s = JSON.parse(raw) as { soundOn?: boolean; volume?: number; gameSpeed?: number };
+      const s = JSON.parse(raw) as { soundOn?: boolean; volume?: number; gameSpeed?: number; reducedMotion?: boolean };
       if (typeof s.soundOn === 'boolean') this.soundOn = s.soundOn;
       if (typeof s.volume === 'number') this.volume = Math.max(0, Math.min(1, s.volume));
       if (typeof s.gameSpeed === 'number') this.gameSpeed = Math.max(0.75, Math.min(1.25, s.gameSpeed));
+      if (typeof s.reducedMotion === 'boolean') this.reducedMotion = s.reducedMotion;
     } catch { /* ignore corrupt/absent storage */ }
   }
 
-  /** Persist soundOn/volume/gameSpeed to localStorage (best-effort). */
+  /** Persist soundOn/volume/gameSpeed/reducedMotion to localStorage (best-effort). */
   saveSettings(): void {
     try {
       localStorage.setItem('raidenSettings', JSON.stringify({
-        soundOn: this.soundOn, volume: this.volume, gameSpeed: this.gameSpeed,
+        soundOn: this.soundOn, volume: this.volume, gameSpeed: this.gameSpeed, reducedMotion: this.reducedMotion,
       }));
     } catch { /* ignore quota/unavailable */ }
   }
@@ -275,6 +289,7 @@ export class Game implements GameContext {
 
   /** GameContext hook: trigger/extend a screen shake. `mag` px amplitude, `dur` seconds. */
   shake(mag: number, dur: number): void {
+    if (this.reducedMotion) return;
     // Take the stronger/longer of any overlapping shakes rather than stacking.
     this.shakeMag = Math.max(this.shakeMag, mag);
     this.shakeDur = Math.max(this.shakeDur, dur);
@@ -283,11 +298,13 @@ export class Game implements GameContext {
 
   /** GameContext hook: freeze gameplay for `ms` ms; takes the longer of any overlapping freeze. */
   hitStop(ms: number): void {
-    this.hitStopTimer = Math.max(this.hitStopTimer, ms / 1000);
+    const cappedMs = this.reducedMotion ? Math.min(ms, 30) : ms;
+    this.hitStopTimer = Math.max(this.hitStopTimer, cappedMs / 1000);
   }
 
   /** GameContext hook: haptic buzz on touch devices that support the Vibration API (Android; iOS haptics are driven by the real switch overlay in input.ts instead — see there). */
   vibrate(ms: number): void {
+    if (this.reducedMotion) return;
     if (isTouch && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(ms);
   }
 

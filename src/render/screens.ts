@@ -97,10 +97,10 @@ export function drawPause(g: Game) {
   ctx.fillText('P to resume', W/2, H/2 + 24);
 }
 
-/** Settings panel: a centered box showing sound toggle, speed, and volume settings, with key hints. */
+/** Settings panel: a centered box showing sound, speed, volume, and comfort settings, with key hints. */
 export function drawSettings(g: Game) {
   // Panel geometry (touch input.ts's touchDiscrete hit-tests mirror these bands).
-  const bx = W/2 - 130, by = H/2 - 90, bw = 260, bh = 210;
+  const bx = W/2 - 130, by = H/2 - 105, bw = 260, bh = 240;
   ctx.fillStyle = 'rgba(0,10,30,0.94)';
   ctx.fillRect(bx, by, bw, bh);
   ctx.strokeStyle = '#4488ff';
@@ -117,11 +117,12 @@ export function drawSettings(g: Game) {
   ctx.fillText('M  Sound: ' + (g.soundOn ? 'ON ' : 'OFF'), W/2, by + 68);
   ctx.fillText('[  Speed: ' + g.gameSpeed.toFixed(2) + 'x  ]', W/2, by + 92);
   ctx.fillText('V  Volume: ' + Math.round(g.volume * 100) + '%', W/2, by + 116);
+  ctx.fillText('R  Reduce Motion: ' + (g.reducedMotion ? 'ON ' : 'OFF'), W/2, by + 140);
 
   ctx.fillStyle = '#666';
   ctx.font = '11px monospace';
-  ctx.fillText('M sound   [ / ] speed   V volume', W/2, by + 154);
-  ctx.fillText('S to close', W/2, by + 174);
+  ctx.fillText('M sound   [ / ] speed   V volume', W/2, by + 176);
+  ctx.fillText('R reduce motion   S close', W/2, by + 196);
 }
 
 /** Game-over screen: dark scrim, score, leaderboard entry/display, and the continue/share hint. */
