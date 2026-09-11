@@ -21,6 +21,15 @@ longer play sessions, so settings need one more accessibility control.
 - Cap hit-stop duration to a short readable pulse instead of long freezes.
 - Preserve all gameplay mechanics, scoring, stages, and build constraints.
 
+## Phase 4 Slice B: Hitbox Display
+
+- Add a persisted `showHitbox` setting beside the existing comfort controls.
+- Draw a small high-contrast ring at the player's true collision radius when
+  enabled.
+- Keep the default presentation unchanged for players who prefer the arcade
+  look.
+- Expose the toggle in the same keyboard/touch settings panel.
+
 ## Non-goals
 
 - No DOM accessibility overlay; the project remains a single-canvas arcade game.
@@ -32,4 +41,6 @@ longer play sessions, so settings need one more accessibility control.
 - Settings persistence round-trips `reducedMotion` with existing settings.
 - Toggling reduced motion clears active shake and persists immediately.
 - Reduced motion suppresses new shake/haptic events and clamps hit-stop.
+- Settings persistence round-trips `showHitbox`; the player renderer emits the
+  extra hitbox ring only when the setting is enabled.
 - Existing unit tests, typecheck, and single-file production build remain green.

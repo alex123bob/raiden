@@ -30,12 +30,13 @@ describe('settings persistence', () => {
   });
 
   it('loadSettings restores persisted values', () => {
-    store['raidenSettings'] = JSON.stringify({ soundOn: false, volume: 0.25, gameSpeed: 1.25, reducedMotion: true });
+    store['raidenSettings'] = JSON.stringify({ soundOn: false, volume: 0.25, gameSpeed: 1.25, reducedMotion: true, showHitbox: true });
     const g = newGame();
     expect(g.soundOn).toBe(false);
     expect(g.volume).toBe(0.25);
     expect(g.gameSpeed).toBe(1.25);
     expect(g.reducedMotion).toBe(true);
+    expect(g.showHitbox).toBe(true);
   });
 
   it('toggleReducedMotion persists and clears active shake', () => {
@@ -60,6 +61,13 @@ describe('settings persistence', () => {
 
     g.hitStop(110);
     expect(g.hitStopTimer).toBeCloseTo(0.03, 5);
+  });
+
+  it('toggleHitbox persists the visible hitbox setting', () => {
+    const g = newGame();
+    g.toggleHitbox();
+    expect(g.showHitbox).toBe(true);
+    expect(JSON.parse(store['raidenSettings']).showHitbox).toBe(true);
   });
 
   it('saveSettings never throws when localStorage is unavailable', () => {

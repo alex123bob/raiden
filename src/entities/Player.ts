@@ -117,7 +117,7 @@ export class Player extends Entity {
     }
     if (!ctx.keys['KeyB']) ctx.keys['_bombUsed'] = false;   // release resets the latch
   }
-  draw(rc: RenderContext, _ctx: GameContext): void {
+  draw(rc: RenderContext, ctx: GameContext): void {
     const p = this;
     if (p.dead) return;
     if (p.invTimer > 0 && Math.floor(p.invTimer * 10) % 2 === 0) return;   // blink every other 0.1s tick while invulnerable
@@ -199,6 +199,19 @@ export class Player extends Entity {
       rc.globalAlpha = 1;
       rc.shadowBlur = 0;
       rc.shadowColor = 'transparent';
+    }
+
+    if (ctx.showHitbox) {
+      rc.save();
+      rc.translate(p.x, p.y);
+      rc.strokeStyle = '#ffffff';
+      rc.lineWidth = 1.5;
+      rc.globalAlpha = 0.95;
+      rc.beginPath(); rc.arc(0, 0, p.r, 0, Math.PI * 2); rc.stroke();
+      rc.fillStyle = '#ff4444';
+      rc.beginPath(); rc.arc(0, 0, 2.5, 0, Math.PI * 2); rc.fill();
+      rc.restore();
+      rc.globalAlpha = 1;
     }
   }
   kill(ctx: GameContext): void {

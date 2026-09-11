@@ -47,6 +47,7 @@ export interface GameContext {
   maxCombo: number;                       // best combo reached during the current run
   stageNoMiss: boolean;                   // true until the player loses a life during this stage
   stageNoBomb: boolean;                   // true until the player spends a bomb during this stage
+  showHitbox: boolean;                    // true when the player's exact collision ring should be drawn
   lastStageBonus: StageBonusAward | null; // most recent stage-clear bonus result, for the clear overlay
   leaderboard: LeaderboardEntry[];        // local top scores loaded from safe localStorage JSON
   initialsEntry: InitialsEntry | null;    // active game-over initials entry flow, if the score qualifies

@@ -58,6 +58,7 @@ export class Game implements GameContext {
   gameSpeed = 1.0;                 // global time multiplier from SPEED_STEPS (settings)
   volume = 0.7;                    // master volume (0..1), persisted
   reducedMotion = false;           // accessibility comfort toggle; suppresses shake/haptics and softens hit-stop
+  showHitbox = false;              // accessibility/meta toggle; draws the player's true collision circle
   score = 0;                       // current run's score
   leaderboard: LeaderboardEntry[] = loadLeaderboard(); // local top-10 scores with initials
   highScore = loadHighScore(this.leaderboard);   // persisted best score, compatible with legacy raidenHS
@@ -134,24 +135,35 @@ export class Game implements GameContext {
     this.saveSettings();
   }
 
-  /** Read persisted settings from localStorage into soundOn/volume/gameSpeed/reducedMotion (best-effort). */
+  /** Flip the visible player-hitbox overlay and persist it. */
+  toggleHitbox(): void {
+    this.showHitbox = !this.showHitbox;
+    this.saveSettings();
+  }
+
+  /** Read persisted settings from localStorage into soundOn/volume/gameSpeed/reducedMotion/showHitbox (best-effort). */
   loadSettings(): void {
     try {
       const raw = localStorage.getItem('raidenSettings');
       if (!raw) return;
-      const s = JSON.parse(raw) as { soundOn?: boolean; volume?: number; gameSpeed?: number; reducedMotion?: boolean };
+      const s = JSON.parse(raw) as { soundOn?: boolean; volume?: number; gameSpeed?: number; reducedMotion?: boolean; showHitbox?: boolean };
       if (typeof s.soundOn === 'boolean') this.soundOn = s.soundOn;
       if (typeof s.volume === 'number') this.volume = Math.max(0, Math.min(1, s.volume));
       if (typeof s.gameSpeed === 'number') this.gameSpeed = Math.max(0.75, Math.min(1.25, s.gameSpeed));
       if (typeof s.reducedMotion === 'boolean') this.reducedMotion = s.reducedMotion;
+      if (typeof s.showHitbox === 'boolean') this.showHitbox = s.showHitbox;
     } catch { /* ignore corrupt/absent storage */ }
   }
 
-  /** Persist soundOn/volume/gameSpeed/reducedMotion to localStorage (best-effort). */
+  /** Persist soundOn/volume/gameSpeed/reducedMotion/showHitbox to localStorage (best-effort). */
   saveSettings(): void {
     try {
       localStorage.setItem('raidenSettings', JSON.stringify({
-        soundOn: this.soundOn, volume: this.volume, gameSpeed: this.gameSpeed, reducedMotion: this.reducedMotion,
+        soundOn: this.soundOn,
+        volume: this.volume,
+        gameSpeed: this.gameSpeed,
+        reducedMotion: this.reducedMotion,
+        showHitbox: this.showHitbox,
       }));
     } catch { /* ignore quota/unavailable */ }
   }

@@ -1,5 +1,23 @@
 import { describe, it, expect } from 'vitest';
+import type { RenderContext } from '../src/core/Renderer.js';
 import { stubContext } from './context-stub.js';
+
+function recordingRenderer(): { rc: RenderContext; arcs: number[]; strokes: { count: number } } {
+  const arcs: number[] = [];
+  const strokes = { count: 0 };
+  const gradient = { addColorStop() {} } as CanvasGradient;
+  const rc = {
+    withTint() {}, save() {}, restore() {}, translate() {}, rotate() {}, beginPath() {},
+    moveTo() {}, lineTo() {}, closePath() {}, ellipse() {}, bezierCurveTo() {},
+    arc(_x: number, _y: number, r: number) { arcs.push(r); },
+    fill() {}, stroke() { strokes.count++; }, fillRect() {}, strokeRect() {}, drawImage() {},
+    createRadialGradient() { return gradient; }, createLinearGradient() { return gradient; }, fillText() {},
+    fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, globalAlpha: 1,
+    shadowColor: 'transparent', shadowBlur: 0, font: '',
+    textAlign: 'left' as CanvasTextAlign, textBaseline: 'alphabetic' as CanvasTextBaseline,
+  } as unknown as RenderContext;
+  return { rc, arcs, strokes };
+}
 
 describe('Player', () => {
   it('clamps movement to the play field', () => {
@@ -123,5 +141,20 @@ describe('Player', () => {
     const superShots = g.playerBullets.filter(b => b.r === 6 && b.dmg === 15);
     expect(superShots.length).toBe(12);
     expect(p.charging).toBe(true);
+  });
+
+  it('draws the exact hitbox ring only when enabled', () => {
+    const g = stubContext();
+    const p = g.player!;
+
+    const off = recordingRenderer();
+    p.draw(off.rc, g);
+    expect(off.arcs).not.toContain(p.r);
+
+    g.showHitbox = true;
+    const on = recordingRenderer();
+    p.draw(on.rc, g);
+    expect(on.arcs).toContain(p.r);
+    expect(on.strokes.count).toBeGreaterThan(off.strokes.count);
   });
 });
