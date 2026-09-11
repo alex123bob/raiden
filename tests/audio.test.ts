@@ -34,4 +34,39 @@ describe('master volume', () => {
     const bus = new WebAudioBus();
     expect(() => { bus.setVolume(0.3); getMasterGain(); }).not.toThrow();
   });
+
+  it('WebAudioBus applies its volume to the bus-local output gain', () => {
+    class FakeParam { value = 0; setValueAtTime() {} exponentialRampToValueAtTime() {} linearRampToValueAtTime() {} }
+    class FakeGain { gain = new FakeParam(); connect() {} }
+    class FakeOscillator {
+      type: OscillatorType = 'sine';
+      frequency = new FakeParam();
+      connect() {}
+      start() {}
+      stop() {}
+    }
+    class FakeAudioContext {
+      currentTime = 0;
+      state = 'running' as AudioContextState;
+      destination = {} as AudioNode;
+      createGain() { return new FakeGain() as unknown as GainNode; }
+      createOscillator() { return new FakeOscillator() as unknown as OscillatorNode; }
+      resume() { return Promise.resolve(); }
+    }
+
+    const windowLike = window as unknown as { AudioContext?: unknown };
+    const previous = windowLike.AudioContext;
+    windowLike.AudioContext = FakeAudioContext;
+    try {
+      const bus = new WebAudioBus();
+      bus.setVolume(0.25);
+      bus.play('graze');
+      const gain = (bus as unknown as { sfxGain: { gain: { value: number } } }).sfxGain;
+      expect(gain.gain.value).toBe(0.25);
+      bus.setVolume(0.8);
+      expect(gain.gain.value).toBe(0.8);
+    } finally {
+      windowLike.AudioContext = previous;
+    }
+  });
 });

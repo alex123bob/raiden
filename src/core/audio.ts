@@ -43,6 +43,7 @@ export function getAudio(): AudioContext | null {
 
 let masterGain: GainNode | null = null;   // shared output node; SFX + music connect here
 let masterVolume = 0.7;                    // 0..1, applied to masterGain
+let activeSfxOutput: AudioNode | null = null; // temporary bus-local output during synchronous SFX synthesis
 
 /** Lazily create the shared master GainNode (SFX + music route through it). Null when no AudioContext. */
 export function getMasterGain(): GainNode | null {
@@ -70,11 +71,19 @@ export function outputNode(): AudioNode | null {
   return getMasterGain() ?? getAudio()?.destination ?? null;
 }
 
+function sfxOutput(ac: AudioContext): AudioNode {
+  return activeSfxOutput ?? outputNode() ?? ac.destination;
+}
+
 /** AudioBus that synthesizes SFX through the Web Audio API. */
 export class WebAudioBus implements AudioBus {
   enabled = true;              // when false, play() is a no-op (mute)
   private sfxVol = 1.0;
-  setVolume(v: number): void { this.sfxVol = Math.max(0, Math.min(1, v)); }
+  private sfxGain: GainNode | null = null;
+  setVolume(v: number): void {
+    this.sfxVol = Math.max(0, Math.min(1, v));
+    if (this.sfxGain) this.sfxGain.gain.value = this.sfxVol;
+  }
   play(sfxKey: string, opts?: SfxOpts): void {
     if (!this.enabled) return;
     const def = SFX.get(sfxKey);
@@ -82,10 +91,26 @@ export class WebAudioBus implements AudioBus {
     try {
       const ac = getAudio();
       if (!ac) return;
-      def.play(ac, opts ?? {});
+      const previousOutput = activeSfxOutput;
+      activeSfxOutput = this.outputFor(ac);
+      try {
+        def.play(ac, opts ?? {});
+      } finally {
+        activeSfxOutput = previousOutput;
+      }
     } catch { /* ignore */ }   // never let an audio glitch crash the game loop
   }
   setEnabled(v: boolean): void { this.enabled = v; }
+
+  /** Create the bus-local SFX gain once, then feed it into the shared master. */
+  private outputFor(ac: AudioContext): AudioNode {
+    if (!this.sfxGain) {
+      this.sfxGain = ac.createGain();
+      this.sfxGain.gain.value = this.sfxVol;
+      this.sfxGain.connect(outputNode() ?? ac.destination);
+    }
+    return this.sfxGain;
+  }
 }
 
 /** No-op AudioBus for headless tests or when sound is unavailable. */
@@ -104,7 +129,7 @@ registerSfx({
     const weapon = opts.weapon ?? 0;      // weapon index selects timbre/pitch (0=vulcan, 1=spread, 2=missile, 3=plasma)
     const osc = ac.createOscillator();
     const gain = ac.createGain();
-    osc.connect(gain); gain.connect(outputNode() ?? ac.destination);
+    osc.connect(gain); gain.connect(sfxOutput(ac));
     if (weapon === 1) {
       // Laser: falling square-wave chirp over 0.15s.
       osc.type = 'square';
@@ -149,7 +174,7 @@ registerSfx({
     src.buffer = buf;
     filter.type = 'lowpass';
     filter.frequency.value = 300 + size * 200;   // bigger blasts let through lower rumble
-    src.connect(filter); filter.connect(gain); gain.connect(outputNode() ?? ac.destination);
+    src.connect(filter); filter.connect(gain); gain.connect(sfxOutput(ac));
     gain.gain.setValueAtTime(Math.min(1, 0.15 + size * 0.1), ac.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.4);
     src.start(ac.currentTime);
@@ -163,7 +188,7 @@ registerSfx({
     [523, 659, 784].forEach((freq, i) => {
       const osc = ac.createOscillator();
       const gain = ac.createGain();
-      osc.connect(gain); gain.connect(outputNode() ?? ac.destination);
+      osc.connect(gain); gain.connect(sfxOutput(ac));
       osc.frequency.value = freq;
       osc.type = 'sine';
       const t = ac.currentTime + i * 0.09;   // note start time
@@ -178,6 +203,7 @@ registerSfx({
   key: 'bomb',
   play(ac) {
     const t0 = ac.currentTime;
+    const out = sfxOutput(ac);
 
     // Layer 1: sharp initial crack — a short, bright noise burst for the flash's impact.
     const crackLen = ac.sampleRate * 0.12;
@@ -190,7 +216,7 @@ registerSfx({
     crackSrc.buffer = crackBuf;
     crackFilter.type = 'highpass';
     crackFilter.frequency.value = 1200;
-    crackSrc.connect(crackFilter); crackFilter.connect(crackGain); crackGain.connect(outputNode() ?? ac.destination);
+    crackSrc.connect(crackFilter); crackFilter.connect(crackGain); crackGain.connect(out);
     crackGain.gain.setValueAtTime(0.9, t0);
     crackGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12);
     crackSrc.start(t0);
@@ -199,7 +225,7 @@ registerSfx({
     const boomOsc = ac.createOscillator();
     const boomGain = ac.createGain();
     boomOsc.type = 'sine';
-    boomOsc.connect(boomGain); boomGain.connect(outputNode() ?? ac.destination);
+    boomOsc.connect(boomGain); boomGain.connect(out);
     boomOsc.frequency.setValueAtTime(150, t0);
     boomOsc.frequency.exponentialRampToValueAtTime(35, t0 + 0.6);
     boomGain.gain.setValueAtTime(1.0, t0);
@@ -219,7 +245,7 @@ registerSfx({
     filter.frequency.setValueAtTime(100, t0);
     filter.frequency.linearRampToValueAtTime(1400, t0 + 0.25);
     filter.frequency.exponentialRampToValueAtTime(45, t0 + 1.4);
-    src.connect(filter); filter.connect(gain); gain.connect(outputNode() ?? ac.destination);
+    src.connect(filter); filter.connect(gain); gain.connect(out);
     gain.gain.setValueAtTime(0.8, t0);
     gain.gain.exponentialRampToValueAtTime(0.001, t0 + 1.4);
     src.start(t0);
@@ -231,7 +257,7 @@ registerSfx({
     sirenOsc.type = 'sawtooth';
     sirenFilter.type = 'lowpass';
     sirenFilter.frequency.value = 2200;
-    sirenOsc.connect(sirenFilter); sirenFilter.connect(sirenGain); sirenGain.connect(outputNode() ?? ac.destination);
+    sirenOsc.connect(sirenFilter); sirenFilter.connect(sirenGain); sirenGain.connect(out);
     sirenOsc.frequency.setValueAtTime(900, t0);
     sirenOsc.frequency.exponentialRampToValueAtTime(120, t0 + 0.7);
     sirenGain.gain.setValueAtTime(0.001, t0);
@@ -247,7 +273,7 @@ registerSfx({
     // Soft, very short high tick.
     const osc = ac.createOscillator();
     const gain = ac.createGain();
-    const out = outputNode() ?? ac.destination;
+    const out = sfxOutput(ac);
     osc.connect(gain); gain.connect(out);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(1800, ac.currentTime);

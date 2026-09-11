@@ -4,13 +4,20 @@ import { getAudio, outputNode } from './audio.js';
 export interface Note { time: number; dur: number; freq: number; type: OscillatorType; gain: number; }
 /** A voice within a track (role tags it for future intensity gating). */
 export interface Layer { role: 'bass' | 'arp' | 'lead' | 'drums'; notes: Note[]; }
-/** A looping piece of music: tempo (BPM), loop length in beats, and its layers. */
-export interface Track { key: string; tempo: number; loopBeats: number; layers: Layer[]; }
+/** A synthesized piece of music: tempo (BPM), loop length in beats, layers, and optional one-shot mode. */
+export interface Track {
+  key: string;
+  tempo: number;
+  loopBeats: number;
+  layers: Layer[];
+  /** Short cue tracks play once; stage/boss/title tracks loop by default. */
+  loop?: boolean;
+}
 
 /** Sink handed to the game as ctx.music. WebAudioMusic plays; SilentMusic is the test/no-audio no-op. */
 export interface MusicSink {
-  play(trackKey: string): void;   // switch to this track (no-op if already playing it)
-  stop(): void;                   // halt scheduling immediately
+  play(trackKey: string, returnTrackKey?: string): void;   // crossfade; one-shot tracks may return to a chosen track
+  stop(): void;                   // stop scheduling immediately and fade out
   setEnabled(enabled: boolean): void;
   setVolume(v: number): void;     // 0..1, music's share of master
 }
@@ -30,7 +37,7 @@ export function stageThemeFor(stage: number): string {
 
 /** No-op music sink for headless tests / when audio is unavailable. */
 export class SilentMusic implements MusicSink {
-  play(_k: string): void {}
+  play(_k: string, _returnKey?: string): void {}
   stop(): void {}
   setEnabled(_e: boolean): void {}
   setVolume(_v: number): void {}
@@ -38,6 +45,7 @@ export class SilentMusic implements MusicSink {
 
 const LOOKAHEAD_MS = 25;      // scheduler tick interval
 const SCHEDULE_AHEAD = 0.1;   // seconds of audio scheduled beyond now
+const CROSSFADE_SECONDS = 0.4;
 
 /** Plays tracks by scheduling oscillator notes ~100ms ahead of the audio clock. */
 export class WebAudioMusic implements MusicSink {
@@ -48,47 +56,100 @@ export class WebAudioMusic implements MusicSink {
   private timer: ReturnType<typeof setInterval> | null = null;
   private nextNoteTime = 0;                 // audio-clock time of the next loop's start
   private beatDur = 0.5;                    // seconds per beat, from tempo
+  private oneShotScheduled = false;
+  private oneShotEndTime = Infinity;
+  private returnTrack: Track | null = null;
 
   setEnabled(e: boolean): void {
     this.enabled = e;
-    if (!e) this.stop();
+    if (!e) {
+      // Preserve the selected track so a mute toggle can resume it later.
+      this.stopScheduler();
+      if (this.gain) this.gain.gain.value = 0;
+    } else if (this.current && this.timer === null) {
+      this.startScheduler();
+    }
   }
   setVolume(v: number): void {
     this.vol = Math.max(0, Math.min(1, v));
     if (this.gain) this.gain.gain.value = this.vol;
   }
-  play(trackKey: string): void {
+  play(trackKey: string, returnTrackKey?: string): void {
     if (!this.enabled) return;
     const track = getTrack(trackKey);
     if (!track) return;                     // unknown key: ignore
-    if (this.current && this.current.key === track.key) return;  // already playing
-    const ac = getAudio();
-    if (!ac) return;                        // no audio support: silent
+    if (this.current && this.current.key === track.key && this.timer !== null) return;  // already playing
     try {
       this.stopScheduler();
       this.current = track;
-      this.beatDur = 60 / track.tempo;
-      if (!this.gain) {
-        this.gain = ac.createGain();
-        this.gain.gain.value = this.vol;
-        const out = outputNode() ?? ac.destination;
-        this.gain.connect(out);
-      }
-      this.nextNoteTime = ac.currentTime + 0.05;
-      this.timer = setInterval(() => this.tick(), LOOKAHEAD_MS);
+      this.returnTrack = returnTrackKey ? getTrack(returnTrackKey) ?? null : null;
+      this.startScheduler();
     } catch { /* never crash the loop */ }
   }
   stop(): void {
     this.stopScheduler();
+    try {
+      this.fadeOut(this.gain, getAudio()?.currentTime ?? 0);
+    } catch { /* never let an audio glitch crash a state transition */ }
+    this.gain = null;
     this.current = null;
+    this.returnTrack = null;
   }
   private stopScheduler(): void {
     if (this.timer !== null) { clearInterval(this.timer); this.timer = null; }
   }
-  private tick(): void {
-    const ac = getAudio();
-    if (!ac || !this.current || !this.gain) return;
+  private startScheduler(): void {
     try {
+      const ac = getAudio();
+      if (!ac || !this.current) return;       // no audio support: remain silent
+      const previousGain = this.gain;
+      this.beatDur = 60 / this.current.tempo;
+      this.fadeOut(previousGain, ac.currentTime);
+      this.gain = ac.createGain();
+      const out = outputNode() ?? ac.destination;
+      this.gain.connect(out);
+      this.gain.gain.setValueAtTime(0.0001, ac.currentTime);
+      this.gain.gain.linearRampToValueAtTime(this.vol, ac.currentTime + CROSSFADE_SECONDS);
+      this.nextNoteTime = ac.currentTime + 0.05;
+      this.oneShotScheduled = false;
+      this.oneShotEndTime = this.current.loop === false
+        ? this.nextNoteTime + this.trackDuration(this.current) * this.beatDur
+        : Infinity;
+      this.timer = setInterval(() => this.tick(), LOOKAHEAD_MS);
+    } catch { /* remain silent if the browser audio graph rejects a change */ }
+  }
+  private fadeOut(gain: GainNode | null, now: number): void {
+    if (!gain) return;
+    try {
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), now);
+      gain.gain.linearRampToValueAtTime(0.0001, now + CROSSFADE_SECONDS);
+    } catch { /* ignore */ }
+  }
+  private trackDuration(track: Track): number {
+    let lastBeat = track.loopBeats;
+    for (const layer of track.layers) {
+      for (const note of layer.notes) lastBeat = Math.max(lastBeat, note.time + note.dur);
+    }
+    return lastBeat;
+  }
+  private tick(): void {
+    try {
+      const ac = getAudio();
+      if (!ac || !this.current || !this.gain) return;
+      if (this.current.loop === false) {
+        if (!this.oneShotScheduled && this.nextNoteTime < ac.currentTime + SCHEDULE_AHEAD) {
+          this.scheduleLoop(ac, this.nextNoteTime);
+          this.oneShotScheduled = true;
+        }
+        if (this.oneShotScheduled && ac.currentTime >= this.oneShotEndTime) {
+          const returnTrack = this.returnTrack;
+          this.returnTrack = null;
+          if (returnTrack) this.play(returnTrack.key);
+          else this.stop();
+        }
+        return;
+      }
       const loopLen = this.current.loopBeats * this.beatDur;
       // Schedule whole loops until we're SCHEDULE_AHEAD past now.
       while (this.nextNoteTime < ac.currentTime + SCHEDULE_AHEAD) {
@@ -98,6 +159,8 @@ export class WebAudioMusic implements MusicSink {
     } catch { /* ignore */ }
   }
   private scheduleLoop(ac: AudioContext, loopStart: number): void {
+    const trackGain = this.gain;
+    if (!trackGain || !this.current) return;
     for (const layer of this.current!.layers) {
       for (const n of layer.notes) {
         const t = loopStart + n.time * this.beatDur;
@@ -105,7 +168,7 @@ export class WebAudioMusic implements MusicSink {
         const g = ac.createGain();
         osc.type = n.type;
         osc.frequency.value = n.freq;
-        osc.connect(g); g.connect(this.gain!);
+        osc.connect(g); g.connect(trackGain);
         const dur = n.dur * this.beatDur;
         g.gain.setValueAtTime(0.0001, t);
         g.gain.exponentialRampToValueAtTime(n.gain, t + 0.01);
@@ -194,6 +257,7 @@ registerTrack({
   key: 'stage-clear',
   tempo: 150,
   loopBeats: 4,
+  loop: false,
   layers: [
     { role: 'lead', notes: [261.63,329.63,392,523.25].map((f,i) => ({
       time: i * 0.75, dur: 0.7, freq: f, type: 'square' as OscillatorType, gain: 0.12 })) },
@@ -205,6 +269,7 @@ registerTrack({
   key: 'game-over',
   tempo: 84,
   loopBeats: 4,
+  loop: false,
   layers: [
     { role: 'lead', notes: [329.63,293.66,246.94,196].map((f,i) => ({
       time: i * 0.9, dur: 0.85, freq: f, type: 'triangle' as OscillatorType, gain: 0.12 })) },

@@ -24,6 +24,63 @@ describe('music engine', () => {
     const m = new WebAudioMusic();
     expect(() => m.play('does-not-exist')).not.toThrow();
   });
+
+  it('retains the selected track across mute and resumes it when re-enabled', () => {
+    class FakeParam {
+      value = 0;
+      cancelCount = 0;
+      setValueAtTime() {}
+      exponentialRampToValueAtTime() {}
+      linearRampToValueAtTime() {}
+      cancelScheduledValues() { this.cancelCount++; }
+    }
+    class FakeGain { gain = new FakeParam(); connect() {} }
+    class FakeOscillator {
+      type: OscillatorType = 'sine';
+      frequency = new FakeParam();
+      connect() {}
+      start() {}
+      stop() {}
+    }
+    class FakeAudioContext {
+      static instance: FakeAudioContext;
+      gains: FakeGain[] = [];
+      currentTime = 0;
+      state = 'running' as AudioContextState;
+      destination = {} as AudioNode;
+      constructor() { FakeAudioContext.instance = this; }
+      createGain() { const gain = new FakeGain(); this.gains.push(gain); return gain as unknown as GainNode; }
+      createOscillator() { return new FakeOscillator() as unknown as OscillatorNode; }
+      resume() { return Promise.resolve(); }
+    }
+
+    const windowLike = window as unknown as { AudioContext?: unknown };
+    const previous = windowLike.AudioContext;
+    windowLike.AudioContext = FakeAudioContext;
+    try {
+      const m = new WebAudioMusic();
+      const internals = m as unknown as { current: { key: string } | null; timer: unknown };
+      m.play('stage-a');
+      expect(internals.timer).not.toBeNull();
+      m.play('boss');
+      expect(internals.current?.key).toBe('boss');
+      expect(FakeAudioContext.instance.gains.some(g => g.gain.cancelCount > 0)).toBe(true);
+      m.setEnabled(false);
+      expect(internals.current?.key).toBe('boss');
+      expect(internals.timer).toBeNull();
+      m.setEnabled(true);
+      expect(internals.current?.key).toBe('boss');
+      expect(internals.timer).not.toBeNull();
+      m.play('stage-clear', 'title');
+      (FakeAudioContext.instance as unknown as { currentTime: number }).currentTime = 100;
+      (m as unknown as { tick(): void }).tick();
+      expect(internals.current?.key).toBe('title');
+      m.stop();
+      expect(internals.current).toBeNull();
+    } finally {
+      windowLike.AudioContext = previous;
+    }
+  });
 });
 
 describe('music tracks and stage mapping', () => {
@@ -32,6 +89,8 @@ describe('music tracks and stage mapping', () => {
     for (const k of ['stage-a', 'stage-b', 'stage-c', 'boss', 'title', 'stage-clear', 'game-over']) {
       expect(keys, `missing ${k}`).toContain(k);
     }
+    expect(getTrack('stage-clear')!.loop).toBe(false);
+    expect(getTrack('game-over')!.loop).toBe(false);
   });
 
   it('every stage 1..18 maps to a registered stage theme', () => {
