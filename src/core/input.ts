@@ -37,6 +37,7 @@ function handleKeyPress(g: Game, code: string) {
     if (code === 'KeyS')        g.settingsOpen = false;
     return;
   }
+  if (g.state === STATE.GAMEOVER && g.initialsEntry && g.handleInitialsKey(code)) return;
   if (g.state === STATE.STAGESELECT) {
     if (code === 'ArrowLeft' || code === 'ArrowUp')
       g.selectedStage = Math.max(1, g.selectedStage - 1);

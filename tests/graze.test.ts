@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { checkGraze, GRAZE_RADIUS } from '../src/core/collision.js';
+import { GRAZE_SCORE } from '../src/core/scoring.js';
 import { stubContext } from './context-stub.js';
 
 function bullet(x: number, y: number) {
@@ -14,11 +15,13 @@ describe('graze detection', () => {
     const gap = g.player!.r + GRAZE_RADIUS - 2;
     g.enemyBullets.push(bullet(100 + gap, 100));
     checkGraze(g);
+    expect(g.score).toBe(GRAZE_SCORE);
     expect(g.particles.length).toBeGreaterThan(0);
     expect((g.enemyBullets[0] as { grazed?: boolean }).grazed).toBe(true);
     const n = g.particles.length;
     checkGraze(g);                       // second pass: already grazed, no new particle
     expect(g.particles.length).toBe(n);
+    expect(g.score).toBe(GRAZE_SCORE);
   });
 
   it('does not graze a bullet that is far away', () => {

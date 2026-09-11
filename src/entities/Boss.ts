@@ -7,6 +7,8 @@ import { STAGES } from '../stages/stageData.js';
 import { BULLET_PATTERNS } from '../registries/bullets/patterns.js';
 import { BOSS_TYPES, type BossType } from '../registries/bosses/index.js';
 import { ENEMY_TYPES } from '../registries/enemies/index.js';
+import { stageThemeFor } from '../core/music.js';
+import { awardScore, awardStageBonuses } from '../core/scoring.js';
 import { Enemy } from './Enemy.js';
 import type { PhaseEntry } from '../registries/bosses/index.js';
 
@@ -191,20 +193,21 @@ export function onBossDeath(ctx: GameContext): void {
     ctx.spawnParticles('explosion', boss.x + ox, boss.y + oy, { size: 3, color: '#ff8800' });
   }
   const bossScore = 5000 + bossStage * 2000;
-  ctx.score += bossScore * ctx.loopMult;   // higher loops score more
-  ctx.saveHS();
+  awardScore(ctx, bossScore, 'boss');   // combo and higher-loop multipliers are applied centrally
+  awardStageBonuses(ctx);
   ctx.boss = null;
 
   if (ctx.currentStage < STAGE_COUNT) {
     // More stages remain: brief stage-clear interlude, then the next stage.
     ctx.state = STATE.STAGECLEAR;
     ctx.stageClearTimer = 3.0;
-    ctx.music.play('stage-clear');
+    ctx.music.play('stage-clear', stageThemeFor(ctx.currentStage + 1));
   } else {
     if (ctx.loopMult === 1) {
       // Beat the final stage on the first loop: show victory.
       ctx.state = STATE.VICTORY;
       ctx.victoryTimer = 0;
+      ctx.music.play('title');
     } else {
       // Already looping: bump the multiplier and restart from stage 1, harder.
       ctx.loopMult++;

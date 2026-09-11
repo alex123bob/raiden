@@ -7,6 +7,8 @@ import type { Particle } from '../entities/Particle.js';
 import type { AudioBus } from './audio.js';
 import type { MusicSink } from './music.js';
 import type { WaveEntry } from '../stages/waveGen.js';
+import type { InitialsEntry, LeaderboardEntry } from './leaderboard.js';
+import type { StageBonusAward } from './scoring.js';
 
 // The typed `g`: exactly the fields the current code reads, declared as a
 // contract so Game implements it and test stubs are compiler-checked.
@@ -40,6 +42,14 @@ export interface GameContext {
   stageClearTimer: number;                // countdown (s) during the STAGECLEAR interlude
   victoryTimer: number;                   // countdown (s) used by the VICTORY sequence
   score: number;                          // current run score
+  combo: number;                          // active kill-chain multiplier (0 = no active chain)
+  comboTimer: number;                     // seconds remaining before the active combo expires
+  maxCombo: number;                       // best combo reached during the current run
+  stageNoMiss: boolean;                   // true until the player loses a life during this stage
+  stageNoBomb: boolean;                   // true until the player spends a bomb during this stage
+  lastStageBonus: StageBonusAward | null; // most recent stage-clear bonus result, for the clear overlay
+  leaderboard: LeaderboardEntry[];        // local top scores loaded from safe localStorage JSON
+  initialsEntry: InitialsEntry | null;    // active game-over initials entry flow, if the score qualifies
   audio: AudioBus;                        // sound effect sink (WebAudioBus, or SilentBus in tests)
   music: MusicSink;                       // background-music sink (WebAudioMusic, or SilentMusic in tests)
   /** Spawn a burst of particles of `kind` at (x,y); opts tune size/color/etc. */
@@ -52,6 +62,8 @@ export interface GameContext {
   vibrate(ms: number): void;
   /** Persist the high score if the current score beats it. */
   saveHS(): void;
+  /** Enter the GAMEOVER state and prepare leaderboard initials entry if needed. */
+  enterGameOver(): void;
   /** Reset per-stage state and begin stage `n` (1-based). */
   startStage(n: number): void;
 }

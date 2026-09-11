@@ -2,6 +2,7 @@ import { W, H } from '../config.js';
 import { ctx } from '../canvas.js';
 import { WEAPON_NAMES, WEAPON_COLORS } from '../entities/Bullet.js';
 import type { Game } from '../core/Game.js';
+import { COMBO_WINDOW } from '../core/scoring.js';
 
 // === HUD ===
 /**
@@ -20,6 +21,17 @@ export function drawHUD(g: Game) {
   ctx.font = '13px monospace';
   ctx.textAlign = 'left';
   ctx.fillText('SCORE: ' + g.score, 8, 18);
+
+  if (g.combo > 0) {
+    const frac = Math.max(0, Math.min(1, g.comboTimer / COMBO_WINDOW));
+    ctx.fillStyle = g.combo >= 5 ? '#ffff66' : '#aef0ff';
+    ctx.font = '11px monospace';
+    ctx.fillText('COMBO x' + g.combo, 8, 34);
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.fillRect(8, 39, 74, 4);
+    ctx.fillStyle = g.combo >= 5 ? '#ffaa00' : '#44ddff';
+    ctx.fillRect(8, 39, 74 * frac, 4);
+  }
 
   // Hi-score (top-right)
   ctx.textAlign = 'right';

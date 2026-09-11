@@ -2,6 +2,7 @@ import { killPlayer } from '../entities/Player.js';
 import { tryDropPowerup, checkPlayerVsPowerups } from '../entities/Powerup.js';
 import { onBossDeath } from '../entities/Boss.js';
 import type { GameContext } from './GameContext.js';
+import { awardScore, GRAZE_SCORE } from './scoring.js';
 
 // ===========================================================================
 // COLLISION — pairwise hit tests run once per frame (see runCollision), each
@@ -40,8 +41,7 @@ export function checkPlayerBulletsVsEnemies(ctx: GameContext) {
       }
     }
     if (e.hp <= 0) {
-      ctx.score += e.score * ctx.loopMult;   // higher loops score more
-      ctx.saveHS();
+      awardScore(ctx, e.score, 'enemy');   // combo and higher-loop multipliers are applied centrally
       // Explosion size scales with enemy "bulk"; unlisted kinds default to 1.
       const SIZE_BY_KEY: Record<string, number> = { fighter: 1, gunship: 2, bomber: 3, turret: 4 };
       ctx.spawnParticles('explosion', e.x, e.y, { size: SIZE_BY_KEY[e.def.key] ?? 1, color: e.color });
@@ -53,7 +53,7 @@ export function checkPlayerBulletsVsEnemies(ctx: GameContext) {
 
 /**
  * Enemy bullets skimming the player (inside GRAZE_RADIUS but not colliding):
- * flag each once, emit a spark, and play a rate-limited tick. No scoring yet.
+ * flag each once, award a small score, emit a spark, and play a rate-limited tick.
  */
 export function checkGraze(ctx: GameContext) {
   const p = ctx.player;
@@ -65,6 +65,7 @@ export function checkGraze(ctx: GameContext) {
     const isHit = circleHit(b.x, b.y, b.r, p.x, p.y, p.r);
     if (inGraze && !isHit) {
       b.grazed = true;
+      awardScore(ctx, GRAZE_SCORE, 'graze');
       ctx.spawnParticles('explosion', b.x, b.y, { size: 0.35, color: '#aef0ff' });
       const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
       if (now - lastGrazeSfx > 70) { ctx.audio.play('graze'); lastGrazeSfx = now; }

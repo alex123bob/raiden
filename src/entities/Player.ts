@@ -1,8 +1,9 @@
-import { W, H, CHARGE_DURATION, STATE } from '../config.js';
+import { W, H, CHARGE_DURATION } from '../config.js';
 import type { GameContext } from '../core/GameContext.js';
 import type { RenderContext } from '../core/Renderer.js';
 import { Entity } from '../core/Entity.js';
 import { WEAPON_COLORS, getFireRate, firePlayer, fireSuper, comboOffset } from './Bullet.js';
+import { resetCombo } from '../core/scoring.js';
 
 /** One equipped weapon: `type` selects vulcan(0)/spread(1)/missile(2); `lv` is its power level 1..5. */
 export interface WeaponSlot { type: number; lv: number; }
@@ -45,7 +46,7 @@ export class Player extends Entity {
     if (p.dead) {
       if (p.gameOverTimer !== undefined) {
         p.gameOverTimer -= dt;
-        if (p.gameOverTimer <= 0) { ctx.state = STATE.GAMEOVER; ctx.music.play('game-over'); }
+        if (p.gameOverTimer <= 0) ctx.enterGameOver();
       } else {
         p.respawnTimer -= dt;
         if (p.respawnTimer <= 0) respawnPlayer(p, ctx);
@@ -105,6 +106,7 @@ export class Player extends Entity {
       ctx.keys['_bombUsed'] = true;   // latch: one bomb per physical key-press, even if held
       if (p.bombs > 0) {
         p.bombs--;
+        ctx.stageNoBomb = false;
         ctx.spawnParticles('bombFlash', p.x, p.y);
         ctx.audio.play('bomb');
         ctx.vibrate(300);
@@ -203,6 +205,8 @@ export class Player extends Entity {
     const p = this;
     if (p.invTimer > 0 || p.dead) return;   // invulnerable or already dying: ignore
     p.lives--;
+    ctx.stageNoMiss = false;
+    resetCombo(ctx);
     ctx.spawnParticles('explosion', p.x, p.y, { size: 3, color: '#88ccff' });
     ctx.playerBullets.length = 0;
     p.weapons = [{ type: 0, lv: 1 }];        // death fully resets the loadout to base vulcan

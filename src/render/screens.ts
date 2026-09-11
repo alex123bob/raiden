@@ -3,6 +3,7 @@ import { ctx } from '../canvas.js';
 import { isTouch } from '../core/input.js';
 import type { Game } from '../core/Game.js';
 import { STAGES } from '../stages/stageData.js';
+import type { LeaderboardEntry } from '../core/leaderboard.js';
 
 // === SCREENS ===
 /** Title screen: glowing "RAIDEN" logo, blinking start prompt, hi-score, and input hints (keyboard vs touch). */
@@ -26,21 +27,23 @@ export function drawTitle(g: Game) {
   ctx.fillStyle = '#ffff44';
   ctx.font = '16px monospace';
   if (Math.floor(Date.now() / 500) % 2)   // blinks on/off every 0.5s
-    ctx.fillText('PRESS ENTER TO START', W/2, 340);
+    ctx.fillText('PRESS ENTER TO START', W/2, 330);
 
   ctx.fillStyle = '#aaaaaa';
   ctx.font = '13px monospace';
-  ctx.fillText('HI-SCORE: ' + g.highScore, W/2, 390);
+  ctx.fillText('HI-SCORE: ' + g.highScore, W/2, 376);
+
+  drawLeaderboard(g.leaderboard, 404, 5, 'TOP SCORES');
 
   // Control hints differ by input method.
   ctx.fillStyle = '#888';
   ctx.font = '11px monospace';
   if (isTouch) {
-    ctx.fillText('TAP TO START', W/2, 460);
-    ctx.fillText('L-stick move   FIRE   ★ bomb   ⚙ settings', W/2, 478);
+    ctx.fillText('TAP TO START', W/2, 560);
+    ctx.fillText('L-stick move   FIRE   ★ bomb   ⚙ settings', W/2, 578);
   } else {
-    ctx.fillText('ARROWS move   SPACE fire   B bomb', W/2, 460);
-    ctx.fillText('P pause   S settings   L select stage', W/2, 478);
+    ctx.fillText('ARROWS move   SPACE fire   B bomb', W/2, 560);
+    ctx.fillText('P pause   S settings   L select stage', W/2, 578);
   }
 }
 
@@ -121,21 +124,27 @@ export function drawSettings(g: Game) {
   ctx.fillText('S to close', W/2, by + 174);
 }
 
-/** Game-over screen: dark scrim, "GAME OVER", final score/hi-score, and the continue/share hint. */
+/** Game-over screen: dark scrim, score, leaderboard entry/display, and the continue/share hint. */
 export function drawGameOver(g: Game) {
   ctx.fillStyle = 'rgba(0,0,0,0.82)';
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#ff4444';
   ctx.font = 'bold 48px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('GAME OVER', W/2, 260);
+  ctx.fillText('GAME OVER', W/2, 160);
   ctx.fillStyle = '#fff';
   ctx.font = '18px monospace';
-  ctx.fillText('SCORE: ' + g.score, W/2, 320);
-  ctx.fillText('HI-SCORE: ' + g.highScore, W/2, 348);
-  ctx.fillStyle = '#aaffaa';
-  ctx.font = '13px monospace';
-  ctx.fillText('ENTER → title    C → copy score', W/2, 405);
+  ctx.fillText('SCORE: ' + g.score, W/2, 222);
+  ctx.fillText('HI-SCORE: ' + g.highScore, W/2, 250);
+
+  if (g.initialsEntry) {
+    drawInitialsEntry(g);
+  } else {
+    drawLeaderboard(g.leaderboard, 296, 10, 'LOCAL TOP 10');
+    ctx.fillStyle = '#aaffaa';
+    ctx.font = '13px monospace';
+    ctx.fillText('ENTER → title    C → copy score', W/2, 575);
+  }
 }
 
 /** Stage-clear interlude: glowing "STAGE CLEAR!" banner plus the next-stage countdown message. */
@@ -152,7 +161,20 @@ export function drawStageClear(g: Game) {
   ctx.shadowColor = 'transparent';
   ctx.fillStyle = '#fff';
   ctx.font = '16px monospace';
-  ctx.fillText('STAGE ' + (g.currentStage + 1) + ' INCOMING...', W/2, H/2 + 30);
+  const bonus = g.lastStageBonus;
+  let y = H/2 + 30;
+  if (bonus) {
+    ctx.fillStyle = bonus.noMiss ? '#aaffaa' : '#666';
+    ctx.font = '13px monospace';
+    ctx.fillText('NO MISS BONUS +' + bonus.noMissAward, W/2, y); y += 20;
+    ctx.fillStyle = bonus.noBomb ? '#aaffaa' : '#666';
+    ctx.fillText('NO BOMB BONUS +' + bonus.noBombAward, W/2, y); y += 22;
+    ctx.fillStyle = '#ffffaa';
+    ctx.fillText('TOTAL BONUS +' + bonus.total, W/2, y); y += 26;
+  }
+  ctx.fillStyle = '#fff';
+  ctx.font = '16px monospace';
+  ctx.fillText('STAGE ' + (g.currentStage + 1) + ' INCOMING...', W/2, y);
 }
 
 /** Victory screen (beating the final stage on loop 1): glowing "MISSION COMPLETE", final score, and a blinking continue prompt. */
@@ -176,4 +198,52 @@ export function drawVictory(g: Game) {
   ctx.font = '14px monospace';
   if (Math.floor(Date.now() / 500) % 2)   // blinks on/off every 0.5s
     ctx.fillText('PRESS ENTER', W/2, H/2 + 100);
+}
+
+function drawInitialsEntry(g: Game): void {
+  const entry = g.initialsEntry!;
+  ctx.fillStyle = '#ffff66';
+  ctx.font = 'bold 18px monospace';
+  ctx.fillText('NEW TOP SCORE', W/2, 306);
+
+  const startX = W/2 - 34;
+  ctx.font = 'bold 34px monospace';
+  for (let i = 0; i < 3; i++) {
+    const x = startX + i * 34;
+    ctx.fillStyle = i === entry.cursor ? '#ffffff' : '#aef0ff';
+    ctx.fillText(entry.initials[i], x, 356);
+    if (i === entry.cursor) {
+      ctx.fillStyle = '#ffff66';
+      ctx.fillRect(x - 10, 364, 20, 3);
+    }
+  }
+
+  ctx.fillStyle = '#aaaaaa';
+  ctx.font = '12px monospace';
+  ctx.fillText('TYPE LETTERS OR USE ARROWS', W/2, 408);
+  ctx.fillStyle = '#aaffaa';
+  ctx.font = '13px monospace';
+  ctx.fillText('ENTER SAVE', W/2, 432);
+}
+
+function drawLeaderboard(entries: LeaderboardEntry[], y: number, maxRows: number, title: string): void {
+  ctx.fillStyle = '#aaaaff';
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(title, W/2, y);
+
+  const rows = entries.slice(0, maxRows);
+  ctx.font = '11px monospace';
+  if (!rows.length) {
+    ctx.fillStyle = '#666';
+    ctx.fillText('NO SCORES YET', W/2, y + 18);
+    return;
+  }
+
+  rows.forEach((entry, i) => {
+    const rank = String(i + 1).padStart(2, '0');
+    const score = String(entry.score).padStart(7, ' ');
+    ctx.fillStyle = i === 0 ? '#ffff66' : '#dddddd';
+    ctx.fillText(`${rank}  ${entry.initials}  ${score}  S${entry.stage} L${entry.loop}`, W/2, y + 18 + i * 14);
+  });
 }

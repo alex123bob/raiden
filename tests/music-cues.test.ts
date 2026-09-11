@@ -7,7 +7,8 @@ import { noopCtx } from './dom-setup.js';
 
 class SpyMusic implements MusicSink {
   played: string[] = [];
-  play(k: string) { this.played.push(k); }
+  returns: string[] = [];
+  play(k: string, returnKey?: string) { this.played.push(k); if (returnKey) this.returns.push(returnKey); }
   stop() {}
   setEnabled() {}
   setVolume() {}
@@ -36,14 +37,30 @@ describe('music cues', () => {
     g.boss!.hp = 0;
     g.loop(ts += 1000 / 60);
     expect(spy.played).toContain('stage-clear');
+    expect(spy.returns).toContain('stage-b');
   });
 
   it('plays game-over when the last life is lost', () => {
     const spy = new SpyMusic();
     const g = newGame(spy);
     g.loopMult = 1; g.startGame(1);
-    g.state = 3;               // STATE.GAMEOVER
-    g.onGameOver();            // cue helper (added in Step 6)
+    g.player!.lives = 1;
+    g.player!.kill(g);
+    g.player!.update(2, g);
     expect(spy.played).toContain('game-over');
+    expect(spy.returns).toContain('title');
+  });
+
+  it('switches to the title theme on victory', () => {
+    const spy = new SpyMusic();
+    const g = newGame(spy);
+    g.loopMult = 1; g.startGame(18);
+    g.waveTable = [{ t: 0, boss: 18 }]; g.waveIndex = 0; g.stageTimer = 99;
+    g.lastTime = 1000;
+    g.loop(1000);
+    g.boss!.hp = 0;
+    g.loop(1000 + 1000 / 60);
+    expect(g.state).toBe(5);
+    expect(spy.played).toContain('title');
   });
 });

@@ -4,6 +4,17 @@ import type { GameContext } from './GameContext.js';
 import { CanvasRenderer, type RenderContext } from './Renderer.js';
 import { WebAudioBus, setMasterVolume, type AudioBus } from './audio.js';
 import { WebAudioMusic, stageThemeFor, type MusicSink } from './music.js';
+import {
+  insertScore,
+  loadHighScore,
+  loadLeaderboard,
+  saveLeaderboard,
+  saveLegacyHighScore,
+  type InitialsEntry,
+  type LeaderboardEntry,
+  qualifiesForLeaderboard,
+} from './leaderboard.js';
+import { resetCombo, updateScoring, type StageBonusAward } from './scoring.js';
 import { isTouch } from './input.js';
 import { diffMultFor, densityForStage } from './difficulty.js';
 import { initBackground, updateStars, drawStars, updateBackground, drawBackground } from '../stages/background.js';
@@ -32,6 +43,8 @@ export interface GameDeps {
   music?: MusicSink;
 }
 
+const INITIALS_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
 /**
  * The whole game: owns every mutable piece of state (player, enemies, boss,
  * bullets, particles, powerups, stage/wave progress, score, screen-shake) and
@@ -45,7 +58,15 @@ export class Game implements GameContext {
   gameSpeed = 1.0;                 // global time multiplier from SPEED_STEPS (settings)
   volume = 0.7;                    // master volume (0..1), persisted
   score = 0;                       // current run's score
-  highScore = (() => { try { return parseInt(localStorage.getItem('raidenHS') || '0'); } catch { return 0; } })();   // persisted best score
+  leaderboard: LeaderboardEntry[] = loadLeaderboard(); // local top-10 scores with initials
+  highScore = loadHighScore(this.leaderboard);   // persisted best score, compatible with legacy raidenHS
+  initialsEntry: InitialsEntry | null = null;    // active game-over initials entry, if the score qualifies
+  combo = 0;                         // active kill-chain multiplier (0 = inactive)
+  comboTimer = 0;                    // seconds until active combo expires
+  maxCombo = 0;                      // best combo reached during this run
+  stageNoMiss = true;                // false once a life is lost during the current stage
+  stageNoBomb = true;                // false once a bomb is spent during the current stage
+  lastStageBonus: StageBonusAward | null = null; // shown on the stage-clear overlay
   keys: Record<string, boolean> = {};       // held-key map by KeyboardEvent.code
   moveVec = { x: 0, y: 0 };                 // analog move input from the touch stick, each axis -1..1
   player: Player | null = null;             // the ship, or null before spawn
@@ -132,22 +153,93 @@ export class Game implements GameContext {
     this.saveSettings();
   }
 
-  /** Cue the game-over music sting. Called when the final life is lost. */
-  onGameOver(): void { this.music.play('game-over'); }
-
   /** Persist the current score as the new high score if it beats the stored one. */
   saveHS(): void {
     if (this.score > this.highScore) {
-      this.highScore = this.score;
-      try {
-        localStorage.setItem('raidenHS', String(this.highScore));
-      } catch { /* ignore quota/unavailable */ }
+      this.highScore = Math.floor(this.score);
+      saveLegacyHighScore(this.highScore);
     }
+  }
+
+  /** Enter game-over and prepare a leaderboard initials prompt for qualifying scores. */
+  enterGameOver(): void {
+    this.state = STATE.GAMEOVER;
+    this.music.play('game-over', 'title');
+    this.saveHS();
+    this.leaderboard = loadLeaderboard();
+    this.highScore = loadHighScore(this.leaderboard);
+    this.initialsEntry = qualifiesForLeaderboard(this.score, this.leaderboard)
+      ? { initials: 'AAA', cursor: 0 }
+      : null;
+  }
+
+  /** Handle keyboard-style initials entry on GAMEOVER. Returns true when it consumes the key. */
+  handleInitialsKey(code: string): boolean {
+    if (!this.initialsEntry) return false;
+    if (code === 'Enter') { this.submitLeaderboardInitials(); return true; }
+    if (code === 'ArrowLeft') { this.moveInitialsCursor(-1); return true; }
+    if (code === 'ArrowRight') { this.moveInitialsCursor(1); return true; }
+    if (code === 'ArrowUp') { this.cycleInitial(1); return true; }
+    if (code === 'ArrowDown') { this.cycleInitial(-1); return true; }
+    if (code === 'Backspace') { this.setInitialAtCursor('A', false); this.moveInitialsCursor(-1); return true; }
+    if (/^Key[A-Z]$/.test(code)) { this.setInitialAtCursor(code.slice(3), true); return true; }
+    if (/^Digit[0-9]$/.test(code)) { this.setInitialAtCursor(code.slice(5), true); return true; }
+    return false;
+  }
+
+  /** Save the active initials entry into the local top-10 leaderboard. */
+  submitLeaderboardInitials(): boolean {
+    if (!this.initialsEntry) return false;
+    if (!qualifiesForLeaderboard(this.score, this.leaderboard)) {
+      this.initialsEntry = null;
+      return false;
+    }
+    this.leaderboard = insertScore(this.leaderboard, {
+      initials: this.initialsEntry.initials,
+      score: Math.floor(this.score),
+      stage: this.currentStage,
+      loop: this.loopMult,
+      date: Date.now(),
+    });
+    saveLeaderboard(this.leaderboard);
+    this.highScore = loadHighScore(this.leaderboard);
+    saveLegacyHighScore(this.highScore);
+    this.initialsEntry = null;
+    return true;
+  }
+
+  private moveInitialsCursor(dir: number): void {
+    if (!this.initialsEntry) return;
+    this.initialsEntry.cursor = Math.max(0, Math.min(2, this.initialsEntry.cursor + dir));
+  }
+
+  private cycleInitial(dir: number): void {
+    if (!this.initialsEntry) return;
+    const current = this.initialsEntry.initials[this.initialsEntry.cursor] ?? 'A';
+    const i = Math.max(0, INITIALS_CHARS.indexOf(current));
+    const next = (i + dir + INITIALS_CHARS.length) % INITIALS_CHARS.length;
+    this.setInitialAtCursor(INITIALS_CHARS[next], false);
+  }
+
+  private setInitialAtCursor(ch: string, advance: boolean): void {
+    if (!this.initialsEntry || !INITIALS_CHARS.includes(ch)) return;
+    const chars = this.initialsEntry.initials.split('');
+    chars[this.initialsEntry.cursor] = ch;
+    this.initialsEntry.initials = chars.join('');
+    if (advance) this.moveInitialsCursor(1);
   }
 
   /** Reset for a brand-new run: fresh player/score, clear transient arrays, enter stage `stage` (1-based, default 1). */
   startGame(stage = 1): void {
     this.score = 0;
+    resetCombo(this);
+    this.maxCombo = 0;
+    this.stageNoMiss = true;
+    this.stageNoBomb = true;
+    this.lastStageBonus = null;
+    this.initialsEntry = null;
+    this.leaderboard = loadLeaderboard();
+    this.highScore = loadHighScore(this.leaderboard);
     this.player = createPlayer();
     this.particles.length = 0;
     this.powerups.length = 0;
@@ -159,6 +251,10 @@ export class Game implements GameContext {
   startStage(stage: number): void {
     this.currentStage = stage;
     this.music.play(stageThemeFor(stage));
+    resetCombo(this);
+    this.stageNoMiss = true;
+    this.stageNoBomb = true;
+    this.lastStageBonus = null;
     this.diffMult = diffMultFor(stage, this.loopMult);
     initBackground(stage, this);
     this.waveTable = buildWaveTable(STAGES[stage - 1], this.diffMult, densityForStage(stage));
@@ -240,6 +336,7 @@ export class Game implements GameContext {
     // Shake decays on real time (rawDt), not gameSpeed-scaled dt, so it isn't slowed by settings.
     if (this.shakeTime > 0) this.shakeTime = Math.max(0, this.shakeTime - rawDt);
     if (this.state === STATE.PLAYING) {
+      updateScoring(dt, this);
       updatePlayer(dt, this);
       updatePlayerBullets(dt, this);
       updateEnemies(dt, this);

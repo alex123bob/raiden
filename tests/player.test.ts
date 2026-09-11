@@ -28,6 +28,7 @@ describe('Player', () => {
     g.keys['KeyB'] = true;
     p.update(1 / 60, g);
     expect(p.bombs).toBe(0);
+    expect(g.stageNoBomb).toBe(false);
     expect((g.enemyBullets as unknown as unknown[]).length).toBe(0);
     expect((g.enemies as unknown as { hp: number }[])[0].hp).toBe(40);
     expect((g.boss as unknown as { hp: number }).hp).toBe(750);
@@ -56,8 +57,12 @@ describe('Player', () => {
     const p = g.player!;
     p.weapons = [{ type: 1, lv: 4 }];
     p.lives = 2;
+    g.combo = 4;
+    g.comboTimer = 1;
     p.kill(g);
     expect(p.dead).toBe(true);
+    expect(g.stageNoMiss).toBe(false);
+    expect(g.combo).toBe(0);
     expect(p.weapons).toEqual([{ type: 0, lv: 1 }]);
     p.update(2.1, g);
     expect(p.dead).toBe(false);
