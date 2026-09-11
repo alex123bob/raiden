@@ -3,9 +3,24 @@ import { mkBullet, firePlayer, fireSuper, spawnEnemyBullet } from '../src/entiti
 import { Enemy } from '../src/entities/Enemy.js';
 import { ENEMY_TYPES } from '../src/registries/enemies/index.js';
 import { BULLET_KINDS } from '../src/registries/bullets/index.js';
-import { CanvasRenderer } from '../src/core/Renderer.js';
+import { CanvasRenderer, type RenderContext } from '../src/core/Renderer.js';
 import { noopCtx } from './dom-setup.js';
 import { stubContext } from './context-stub.js';
+
+function recordingRenderer(): { rc: RenderContext; strokes: { count: number } } {
+  const strokes = { count: 0 };
+  const gradient = { addColorStop() {} } as CanvasGradient;
+  const rc = {
+    withTint() {}, save() {}, restore() {}, translate() {}, rotate() {}, beginPath() {},
+    moveTo() {}, lineTo() {}, closePath() {}, ellipse() {}, bezierCurveTo() {}, arc() {},
+    fill() {}, stroke() { strokes.count++; }, fillRect() {}, strokeRect() {}, drawImage() {},
+    createRadialGradient() { return gradient; }, createLinearGradient() { return gradient; }, fillText() {},
+    fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, globalAlpha: 1,
+    shadowColor: 'transparent', shadowBlur: 0, font: '',
+    textAlign: 'left' as CanvasTextAlign, textBaseline: 'alphabetic' as CanvasTextBaseline,
+  } as unknown as RenderContext;
+  return { rc, strokes };
+}
 
 describe('bullet kinds', () => {
   it('vulcan firePlayer lv1 fires two 5-damage bullets', () => {
@@ -39,6 +54,24 @@ describe('bullet kinds', () => {
     expect(mine.def.key).toBe('enemyMine');
     expect(mine.angle).toBeGreaterThan(a0);
     expect(() => mine.draw(new CanvasRenderer(noopCtx), g)).not.toThrow();
+  });
+
+  it('threatContrast adds outlines only to enemy bullets', () => {
+    const g = stubContext();
+    const enemy = spawnEnemyBullet(g, 240, 120, 0, 40, '#ff4444');
+    const off = recordingRenderer();
+    enemy.draw(off.rc, g);
+    expect(off.strokes.count).toBe(0);
+
+    g.threatContrast = true;
+    const on = recordingRenderer();
+    enemy.draw(on.rc, g);
+    expect(on.strokes.count).toBe(2);
+
+    const player = mkBullet('vulcan', 240, 300, -Math.PI / 2);
+    const playerRc = recordingRenderer();
+    player.draw(playerRc.rc, g);
+    expect(playerRc.strokes.count).toBe(0);
   });
 
   it('fireSuper lv5 vulcan fires 12 bullets at 15 damage, r 6', () => {

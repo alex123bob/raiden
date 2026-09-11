@@ -36,6 +36,7 @@ function handleKeyPress(g: Game, code: string) {
     if (code === 'KeyV')        cycleVolumeWrap(g);
     if (code === 'KeyR')        g.toggleReducedMotion();
     if (code === 'KeyH')        g.toggleHitbox();
+    if (code === 'KeyC')        g.toggleThreatContrast();
     if (code === 'KeyS')        g.settingsOpen = false;
     return;
   }
@@ -142,12 +143,13 @@ function within(p: { x: number; y: number }, c: { x: number; y: number; r: numbe
 function touchDiscrete(p: { x: number; y: number }, g: Game) {
   if (g.settingsOpen) {
     // Hand-tuned hit bands matching the settings panel's drawn layout (see screens.ts drawSettings).
-    const bx = W/2 - 130, by = H/2 - 115, bw = 260, bh = 260;
+    const bx = W/2 - 130, by = H/2 - 125, bw = 260, bh = 285;
     if (p.y > by + 55 && p.y < by + 80) { handleKeyPress(g, 'KeyM'); return true; }
     if (p.y > by + 80 && p.y < by + 104) { cycleSpeed(g, p.x < W/2 ? -1 : 1); return true; }
     if (p.y > by + 104 && p.y < by + 128) { cycleVolumeWrap(g); return true; }
     if (p.y > by + 128 && p.y < by + 152) { handleKeyPress(g, 'KeyR'); return true; }
     if (p.y > by + 152 && p.y < by + 176) { handleKeyPress(g, 'KeyH'); return true; }
+    if (p.y > by + 176 && p.y < by + 200) { handleKeyPress(g, 'KeyC'); return true; }
     if (p.x < bx || p.x > bx + bw || p.y < by || p.y > by + bh) g.settingsOpen = false;   // tap outside closes it
     return true;  // swallow all taps while settings is open
   }

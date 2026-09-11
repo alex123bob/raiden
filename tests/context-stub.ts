@@ -37,6 +37,7 @@ export function stubContext(overrides: Partial<GameContext> = {}): GameContext {
     stageNoMiss: true,
     stageNoBomb: true,
     showHitbox: false,
+    threatContrast: false,
     lastStageBonus: null,
     leaderboard: [],
     initialsEntry: null,

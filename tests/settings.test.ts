@@ -30,13 +30,21 @@ describe('settings persistence', () => {
   });
 
   it('loadSettings restores persisted values', () => {
-    store['raidenSettings'] = JSON.stringify({ soundOn: false, volume: 0.25, gameSpeed: 1.25, reducedMotion: true, showHitbox: true });
+    store['raidenSettings'] = JSON.stringify({
+      soundOn: false,
+      volume: 0.25,
+      gameSpeed: 1.25,
+      reducedMotion: true,
+      showHitbox: true,
+      threatContrast: true,
+    });
     const g = newGame();
     expect(g.soundOn).toBe(false);
     expect(g.volume).toBe(0.25);
     expect(g.gameSpeed).toBe(1.25);
     expect(g.reducedMotion).toBe(true);
     expect(g.showHitbox).toBe(true);
+    expect(g.threatContrast).toBe(true);
   });
 
   it('toggleReducedMotion persists and clears active shake', () => {
@@ -68,6 +76,13 @@ describe('settings persistence', () => {
     g.toggleHitbox();
     expect(g.showHitbox).toBe(true);
     expect(JSON.parse(store['raidenSettings']).showHitbox).toBe(true);
+  });
+
+  it('toggleThreatContrast persists the enemy bullet contrast setting', () => {
+    const g = newGame();
+    g.toggleThreatContrast();
+    expect(g.threatContrast).toBe(true);
+    expect(JSON.parse(store['raidenSettings']).threatContrast).toBe(true);
   });
 
   it('saveSettings never throws when localStorage is unavailable', () => {

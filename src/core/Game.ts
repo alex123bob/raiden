@@ -59,6 +59,7 @@ export class Game implements GameContext {
   volume = 0.7;                    // master volume (0..1), persisted
   reducedMotion = false;           // accessibility comfort toggle; suppresses shake/haptics and softens hit-stop
   showHitbox = false;              // accessibility/meta toggle; draws the player's true collision circle
+  threatContrast = false;          // accessibility toggle; outlines enemy bullets for dense screens
   score = 0;                       // current run's score
   leaderboard: LeaderboardEntry[] = loadLeaderboard(); // local top-10 scores with initials
   highScore = loadHighScore(this.leaderboard);   // persisted best score, compatible with legacy raidenHS
@@ -141,21 +142,35 @@ export class Game implements GameContext {
     this.saveSettings();
   }
 
-  /** Read persisted settings from localStorage into soundOn/volume/gameSpeed/reducedMotion/showHitbox (best-effort). */
+  /** Flip the high-contrast threat outline overlay and persist it. */
+  toggleThreatContrast(): void {
+    this.threatContrast = !this.threatContrast;
+    this.saveSettings();
+  }
+
+  /** Read persisted settings from localStorage into soundOn/volume/gameSpeed/reducedMotion/showHitbox/threatContrast (best-effort). */
   loadSettings(): void {
     try {
       const raw = localStorage.getItem('raidenSettings');
       if (!raw) return;
-      const s = JSON.parse(raw) as { soundOn?: boolean; volume?: number; gameSpeed?: number; reducedMotion?: boolean; showHitbox?: boolean };
+      const s = JSON.parse(raw) as {
+        soundOn?: boolean;
+        volume?: number;
+        gameSpeed?: number;
+        reducedMotion?: boolean;
+        showHitbox?: boolean;
+        threatContrast?: boolean;
+      };
       if (typeof s.soundOn === 'boolean') this.soundOn = s.soundOn;
       if (typeof s.volume === 'number') this.volume = Math.max(0, Math.min(1, s.volume));
       if (typeof s.gameSpeed === 'number') this.gameSpeed = Math.max(0.75, Math.min(1.25, s.gameSpeed));
       if (typeof s.reducedMotion === 'boolean') this.reducedMotion = s.reducedMotion;
       if (typeof s.showHitbox === 'boolean') this.showHitbox = s.showHitbox;
+      if (typeof s.threatContrast === 'boolean') this.threatContrast = s.threatContrast;
     } catch { /* ignore corrupt/absent storage */ }
   }
 
-  /** Persist soundOn/volume/gameSpeed/reducedMotion/showHitbox to localStorage (best-effort). */
+  /** Persist soundOn/volume/gameSpeed/reducedMotion/showHitbox/threatContrast to localStorage (best-effort). */
   saveSettings(): void {
     try {
       localStorage.setItem('raidenSettings', JSON.stringify({
@@ -164,6 +179,7 @@ export class Game implements GameContext {
         gameSpeed: this.gameSpeed,
         reducedMotion: this.reducedMotion,
         showHitbox: this.showHitbox,
+        threatContrast: this.threatContrast,
       }));
     } catch { /* ignore quota/unavailable */ }
   }

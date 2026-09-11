@@ -30,6 +30,14 @@ longer play sessions, so settings need one more accessibility control.
   look.
 - Expose the toggle in the same keyboard/touch settings panel.
 
+## Phase 4 Slice C: Threat Contrast
+
+- Add a persisted `threatContrast` setting for dense late-game bullet screens.
+- Draw a neutral high-contrast outline around enemy bullets, missiles, and
+  mines after their normal procedural render.
+- Leave player bullets and enemy art unchanged, so the option specifically
+  improves threat readability.
+
 ## Non-goals
 
 - No DOM accessibility overlay; the project remains a single-canvas arcade game.
@@ -43,4 +51,6 @@ longer play sessions, so settings need one more accessibility control.
 - Reduced motion suppresses new shake/haptic events and clamps hit-stop.
 - Settings persistence round-trips `showHitbox`; the player renderer emits the
   extra hitbox ring only when the setting is enabled.
+- Settings persistence round-trips `threatContrast`; enemy bullet rendering
+  emits the extra outline only when the setting is enabled.
 - Existing unit tests, typecheck, and single-file production build remain green.

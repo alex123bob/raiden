@@ -87,9 +87,23 @@ export class Bullet extends Entity {
     this.x += this.vx * dt;
     this.y += this.vy * dt;
   }
-  draw(rc: RenderContext, _ctx: GameContext): void {
+  draw(rc: RenderContext, ctx: GameContext): void {
     this.def.render(rc, this);
+    if (this.isEnemy && ctx.threatContrast) drawThreatContrast(rc, this);
   }
+}
+
+function drawThreatContrast(rc: RenderContext, b: Bullet): void {
+  rc.save();
+  rc.globalAlpha = 0.82;
+  rc.strokeStyle = '#ffffff';
+  rc.lineWidth = 2;
+  rc.beginPath(); rc.arc(b.x, b.y, b.r + 3, 0, Math.PI * 2); rc.stroke();
+  rc.globalAlpha = 0.65;
+  rc.strokeStyle = '#000000';
+  rc.lineWidth = 1;
+  rc.beginPath(); rc.arc(b.x, b.y, b.r + 5, 0, Math.PI * 2); rc.stroke();
+  rc.restore();
 }
 
 /** Alias: an enemy-fired bullet is the same class (with isEnemy=true). */
