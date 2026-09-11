@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { mkBullet, firePlayer, fireSuper } from '../src/entities/Bullet.js';
+import { mkBullet, firePlayer, fireSuper, spawnEnemyBullet } from '../src/entities/Bullet.js';
 import { Enemy } from '../src/entities/Enemy.js';
 import { ENEMY_TYPES } from '../src/registries/enemies/index.js';
+import { BULLET_KINDS } from '../src/registries/bullets/index.js';
+import { CanvasRenderer } from '../src/core/Renderer.js';
+import { noopCtx } from './dom-setup.js';
 import { stubContext } from './context-stub.js';
 
 describe('bullet kinds', () => {
@@ -25,6 +28,17 @@ describe('bullet kinds', () => {
     for (let i = 0; i < 20; i++) m.update(1 / 60, g);
     expect(m.vx).toBeLessThan(0);   // steered left toward the enemy
     expect(m.vy).toBeLessThan(0);   // steered upward toward the enemy
+  });
+
+  it('enemyMine registers, spins after delay, and renders safely', () => {
+    expect(BULLET_KINDS.has('enemyMine')).toBe(true);
+    const g = stubContext();
+    const mine = spawnEnemyBullet(g, 240, 120, 0, 40, '#55d8ff', 7, 0, 'enemyMine');
+    const a0 = mine.angle;
+    mine.update(1 / 60, g);
+    expect(mine.def.key).toBe('enemyMine');
+    expect(mine.angle).toBeGreaterThan(a0);
+    expect(() => mine.draw(new CanvasRenderer(noopCtx), g)).not.toThrow();
   });
 
   it('fireSuper lv5 vulcan fires 12 bullets at 15 damage, r 6', () => {

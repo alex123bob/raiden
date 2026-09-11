@@ -7,6 +7,8 @@ import { turret } from './turret.js';
 import { swarmer } from './swarmer.js';
 import { dropship } from './dropship.js';
 import { seeker } from './seeker.js';
+import { interceptor } from './interceptor.js';
+import { minelayer } from './minelayer.js';
 
 /** Registry of every enemy kind, keyed by EnemyType.key. */
 export const ENEMY_TYPES = makeRegistry<EnemyType>();
@@ -19,3 +21,5 @@ registerEnemyType(turret);     // stationary, only fires when player is in range
 registerEnemyType(swarmer);    // 1hp, fastest, never fires — early-game dodge fodder
 registerEnemyType(dropship);   // never fires directly, releases fighter drones
 registerEnemyType(seeker);     // weaving mover, rare homing-missile shots
+registerEnemyType(interceptor); // fast crossing attacker with delayed slash shots
+registerEnemyType(minelayer);  // slow area-denial support ship with delayed mines

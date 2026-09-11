@@ -6,6 +6,7 @@ import { missile } from './missile.js';
 import { plasma } from './plasma.js';
 import { enemyBullet } from './enemy.js';
 import { enemyMissile } from './enemyMissile.js';
+import { enemyMine } from './enemyMine.js';
 // Side-effect import: registers the boss BULLET_PATTERNS into their registry.
 import './patterns.js';
 
@@ -19,3 +20,4 @@ registerBulletKind(missile);      // player homing missiles
 registerBulletKind(plasma);       // player piercing energy lanes
 registerBulletKind(enemyBullet);  // generic round used by all enemy/boss fire
 registerBulletKind(enemyMissile); // homing round used by the seeker enemy
+registerBulletKind(enemyMine);    // drifting mine used by the mine-layer enemy

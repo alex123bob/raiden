@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildWaveTable } from '../src/stages/waveGen.js';
+import { buildWaveTable, MOTION, pathArc, pathZigzag } from '../src/stages/waveGen.js';
 import { STAGES } from '../src/stages/stageData.js';
 
 describe('buildWaveTable', () => {
@@ -33,6 +33,40 @@ describe('buildWaveTable', () => {
     const p0 = path(0);
     const p1 = path(1);
     expect(p1.y - p0.y).toBeCloseTo(105 * 2.0);   // stage 1 formation factor 105
+  });
+
+  it('registers Phase 3 motion descriptors', () => {
+    expect(MOTION.has('arc')).toBe(true);
+    expect(MOTION.has('zigzag')).toBe(true);
+  });
+
+  it('arc and zigzag paths move laterally while preserving vertical speed scaling', () => {
+    const arc = pathArc(-40, -30, 120 * 2.0, 80, 2.0);
+    expect(arc(1).x).toBeGreaterThan(arc(0).x);
+    expect(arc(1).y - arc(0).y).toBeCloseTo(240);
+
+    const zigzag = pathZigzag(240, -20, 90 * 1.5, 50, 1.0);
+    expect(zigzag(0).x).toBeCloseTo(190);
+    expect(zigzag(0.5).x).toBeCloseTo(290);
+    expect(zigzag(1).y - zigzag(0).y).toBeCloseTo(135);
+  });
+
+  it('stages 9-18 include the Phase 3 enemy roles and movement vocabulary', () => {
+    const phase3Kinds = new Set<string>();
+    for (let s = 9; s <= STAGES.length; s++) {
+      const waves = STAGES[s - 1].waves as { type?: string; path?: (string | number)[] }[];
+      const types = new Set(waves.map(w => w.type).filter(Boolean) as string[]);
+      const pathKinds = new Set(waves.map(w => w.path?.[0]).filter(Boolean) as string[]);
+
+      expect(types.has('interceptor'), `stage ${s} interceptor`).toBe(true);
+      expect(types.has('minelayer'), `stage ${s} minelayer`).toBe(true);
+      expect([...pathKinds].some(k => k === 'arc' || k === 'zigzag'), `stage ${s} new motion`).toBe(true);
+
+      pathKinds.forEach(k => phase3Kinds.add(k));
+      expect(() => buildWaveTable(STAGES[s - 1], 1.0)).not.toThrow();
+    }
+    expect(phase3Kinds.has('arc')).toBe(true);
+    expect(phase3Kinds.has('zigzag')).toBe(true);
   });
 
   it('density 1.0 leaves the baseline wave count unchanged', () => {

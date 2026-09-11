@@ -29,6 +29,19 @@ export function pathFormation(cx: number, sy: number, spd: number, idx: number, 
   return t => ({ x: cx + offset, y: sy + t * spd });
 }
 
+export function pathArc(sx: number, sy: number, spd: number, drift: number, curve: number): PathFn {
+  return t => ({ x: sx + drift * t + Math.sin(t * curve) * 32, y: sy + t * spd });
+}
+
+export function pathZigzag(sx: number, sy: number, spd: number, amp: number, period: number): PathFn {
+  const p = Math.max(0.1, period);
+  return t => {
+    const phase = ((t / p) % 1 + 1) % 1;
+    const tri = phase < 0.5 ? phase * 4 - 1 : 3 - phase * 4;
+    return { x: sx + tri * amp, y: sy + t * spd };
+  };
+}
+
 // Motion registry: descriptor -> path builder (generalizes the old expandPath switch).
 // Register a new movement kind here to make it usable from stageData waves.
 export const MOTION = new Map<string, (desc: number[], diffMult: number) => PathFn>();
@@ -38,6 +51,8 @@ export function registerMotion(kind: string, builder: (desc: number[], diffMult:
 registerMotion('down', (desc, diffMult) => pathDown(desc[0], desc[1], desc[2] * diffMult));
 registerMotion('sin',  (desc, diffMult) => pathSin(desc[0], desc[1], desc[2] * diffMult, desc[3], desc[4]));
 registerMotion('form', (desc, diffMult) => pathFormation(desc[0], desc[1], desc[2] * diffMult, desc[3], desc[4]));
+registerMotion('arc', (desc, diffMult) => pathArc(desc[0], desc[1], desc[2] * diffMult, desc[3], desc[4]));
+registerMotion('zigzag', (desc, diffMult) => pathZigzag(desc[0], desc[1], desc[2] * diffMult, desc[3], desc[4]));
 
 /**
  * A single spawn instruction as authored in stageData.ts (density 1.0 baseline).
@@ -48,7 +63,7 @@ export interface WaveDescriptor {
   t: number;
   /** If set, this entry triggers the boss for stage N (clears remaining enemies). */
   boss?: number;
-  /** Enemy type key: 'fighter' | 'gunship' | 'bomber' | 'turret' | 'swarmer' | 'dropship' | 'seeker'. */
+  /** Enemy type key registered in ENEMY_TYPES. */
   type?: string;
   /** Turret X position (turret entries only). */
   x?: number;

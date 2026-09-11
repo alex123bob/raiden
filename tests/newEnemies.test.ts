@@ -81,3 +81,53 @@ describe('seeker', () => {
     expect(b.vy).not.toBe(vyBefore);
   });
 });
+
+describe('interceptor', () => {
+  it('fires a delayed crossing pair around the aimed vector', () => {
+    const g = stubContext();
+    g.player!.x = 240; g.player!.y = 400;
+    const e = new Enemy(ENEMY_TYPES.get('interceptor')!, 240, 130, null);
+    e.fire(g);
+
+    expect(g.enemyBullets.length).toBe(2);
+    expect(g.enemyBullets[0].clr).toBe('#ff4fa3');
+    expect(g.enemyBullets[0].vx).toBeGreaterThan(0);
+    expect(g.enemyBullets[1].vx).toBeLessThan(0);
+    expect(g.enemyBullets[0].vy).toBeGreaterThan(0);
+    expect(g.enemyBullets[1].vy).toBeGreaterThan(0);
+    expect(g.enemyBullets[0].delay).toBeCloseTo(0);
+    expect(g.enemyBullets[1].delay).toBeCloseTo(0.09);
+  });
+
+  it('renders without throwing', () => {
+    const e = new Enemy(ENEMY_TYPES.get('interceptor')!, 240, 130, null);
+    expect(e.score).toBe(275);
+    expect(() => e.draw(new CanvasRenderer(noopCtx), stubContext())).not.toThrow();
+  });
+});
+
+describe('minelayer', () => {
+  it('drops three delayed slow mines for area denial', () => {
+    const g = stubContext();
+    const e = new Enemy(ENEMY_TYPES.get('minelayer')!, 240, 130, null);
+    e.fire(g);
+
+    expect(g.enemyBullets.length).toBe(3);
+    for (const b of g.enemyBullets) {
+      expect(b.def.key).toBe('enemyMine');
+      expect(b.clr).toBe('#55d8ff');
+      expect(b.r).toBe(7);
+      expect(b.vy).toBeGreaterThan(0);
+      expect(Math.abs(b.vy)).toBeLessThan(80);
+    }
+    expect(g.enemyBullets[0].delay).toBeCloseTo(0.18);
+    expect(g.enemyBullets[1].delay).toBeCloseTo(0.28);
+    expect(g.enemyBullets[2].delay).toBeCloseTo(0.38);
+  });
+
+  it('renders without throwing', () => {
+    const e = new Enemy(ENEMY_TYPES.get('minelayer')!, 240, 130, null);
+    expect(e.hp).toBe(14);
+    expect(() => e.draw(new CanvasRenderer(noopCtx), stubContext())).not.toThrow();
+  });
+});
