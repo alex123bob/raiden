@@ -8,6 +8,14 @@ import { resetCombo } from '../core/scoring.js';
 /** One equipped weapon: `type` selects vulcan(0)/spread(1)/missile(2); `lv` is its power level 1..5. */
 export interface WeaponSlot { type: number; lv: number; }
 
+function fireHeld(ctx: GameContext): boolean {
+  return !!(ctx.keys['Space'] || ctx.keys['KeyZ']);
+}
+
+function bombHeld(ctx: GameContext): boolean {
+  return !!(ctx.keys['KeyB'] || ctx.keys['KeyX']);
+}
+
 /**
  * The player's ship. Owns movement, up to 2 weapon slots (with per-slot super
  * charge at max level), bombs, lives/respawn, and invulnerability. update()
@@ -74,7 +82,7 @@ export class Player extends Entity {
       // In a combo, only the maxed slot(s) super-fire (see fireSuper); a
       // non-maxed partner keeps its normal pattern via firePlayer.
       const maxed = p.weapons[maxedIdx];
-      if (ctx.keys['Space']) {
+      if (fireHeld(ctx)) {
         p.charging = true;
         if (p.shootTimer <= 0) {
           p.shootTimer = getFireRate(maxed.type, maxed.lv);
@@ -96,13 +104,14 @@ export class Player extends Entity {
       p.chargeTime = 0;
       p.charging = false;
       p.chargeFired = false;
-      if (ctx.keys['Space'] && p.shootTimer <= 0) {
+      if (fireHeld(ctx) && p.shootTimer <= 0) {
         p.shootTimer = getFireRate(p.weapons[0].type, p.weapons[0].lv);
         firePlayer(p, ctx);
       }
     }
 
-    if (ctx.keys['KeyB'] && !ctx.keys['_bombUsed']) {
+    const bombDown = bombHeld(ctx);
+    if (bombDown && !ctx.keys['_bombUsed']) {
       ctx.keys['_bombUsed'] = true;   // latch: one bomb per physical key-press, even if held
       if (p.bombs > 0) {
         p.bombs--;
@@ -115,7 +124,7 @@ export class Player extends Entity {
         if (ctx.boss) ctx.boss.hp -= 250;
       }
     }
-    if (!ctx.keys['KeyB']) ctx.keys['_bombUsed'] = false;   // release resets the latch
+    if (!bombDown) ctx.keys['_bombUsed'] = false;   // release resets the latch
   }
   draw(rc: RenderContext, ctx: GameContext): void {
     const p = this;

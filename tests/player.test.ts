@@ -59,6 +59,24 @@ describe('Player', () => {
     expect(g.keys['_bombUsed']).toBe(false);
   });
 
+  it('X is a bomb alias with the same one-press latch', () => {
+    const g = stubContext();
+    const p = g.player!;
+    p.bombs = 2;
+    g.keys['KeyX'] = true;
+
+    p.update(1 / 60, g);
+    expect(p.bombs).toBe(1);
+    expect(g.keys['_bombUsed']).toBe(true);
+
+    p.update(1 / 60, g);
+    expect(p.bombs).toBe(1);
+
+    g.keys['KeyX'] = false;
+    p.update(1 / 60, g);
+    expect(g.keys['_bombUsed']).toBe(false);
+  });
+
   it('bomb triggers a screen shake', () => {
     const g = stubContext();
     let shaken = 0;
@@ -112,6 +130,16 @@ describe('Player', () => {
     // Advance past the fire-rate cooldown -> another volley, still holding.
     for (let i = 0; i < 20; i++) p.update(1 / 60, g);
     expect(g.playerBullets.length).toBeGreaterThan(afterFirst);
+  });
+
+  it('Z is a held-fire alias', () => {
+    const g = stubContext();
+    const p = g.player!;
+    p.x = 240; p.y = 500;
+    g.keys['KeyZ'] = true;
+
+    p.update(1 / 60, g);
+    expect(g.playerBullets.length).toBeGreaterThan(0);
   });
 
   it('max-level charge auto-unleashes a super burst when the meter fills, without releasing', () => {

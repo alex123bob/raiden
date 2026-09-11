@@ -38,6 +38,13 @@ longer play sessions, so settings need one more accessibility control.
 - Leave player bullets and enemy art unchanged, so the option specifically
   improves threat readability.
 
+## Phase 4 Slice D: Keyboard Comfort Aliases
+
+- Support arcade-style keyboard aliases without adding a full remapping UI:
+  `Z` fires and `X` bombs alongside the existing `Space` and `B` controls.
+- Keep held-fire and one-shot bomb latch semantics identical across aliases.
+- Update keyboard hints so the extra controls are discoverable.
+
 ## Non-goals
 
 - No DOM accessibility overlay; the project remains a single-canvas arcade game.
@@ -53,4 +60,6 @@ longer play sessions, so settings need one more accessibility control.
   extra hitbox ring only when the setting is enabled.
 - Settings persistence round-trips `threatContrast`; enemy bullet rendering
   emits the extra outline only when the setting is enabled.
+- Fire/bomb aliases behave like the primary keys, including held fire and the
+  one-bomb-per-press latch.
 - Existing unit tests, typecheck, and single-file production build remain green.

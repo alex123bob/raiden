@@ -42,7 +42,7 @@ export function drawTitle(g: Game) {
     ctx.fillText('TAP TO START', W/2, 560);
     ctx.fillText('L-stick move   FIRE   ★ bomb   ⚙ settings', W/2, 578);
   } else {
-    ctx.fillText('ARROWS move   SPACE fire   B bomb', W/2, 560);
+    ctx.fillText('ARROWS move   SPACE/Z fire   B/X bomb', W/2, 560);
     ctx.fillText('P pause   S settings   L select stage', W/2, 578);
   }
 }
