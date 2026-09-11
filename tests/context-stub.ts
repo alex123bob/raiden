@@ -2,6 +2,7 @@ import type { GameContext } from '../src/core/GameContext.js';
 import type { WaveEntry } from '../src/stages/waveGen.js';
 import { SilentBus } from '../src/core/audio.js';
 import { SilentMusic } from '../src/core/music.js';
+import { defaultProgress } from '../src/core/progress.js';
 import { Player } from '../src/entities/Player.js';
 import { spawnParticleKind } from '../src/entities/Particle.js';
 
@@ -41,6 +42,7 @@ export function stubContext(overrides: Partial<GameContext> = {}): GameContext {
     lastStageBonus: null,
     leaderboard: [],
     initialsEntry: null,
+    progress: defaultProgress(),
     audio: new SilentBus(),
     music: new SilentMusic(),
     spawnParticles(kind, x, y, opts) { spawnParticleKind(kind, x, y, opts ?? {}, ctx); },
@@ -49,6 +51,7 @@ export function stubContext(overrides: Partial<GameContext> = {}): GameContext {
     vibrate() {},
     saveHS() {},
     enterGameOver() { ctx.state = 3; ctx.music.play('game-over', 'title'); },
+    unlockNextStage() {},
     startStage() {},
     ...overrides,
   };

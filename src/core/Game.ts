@@ -1,4 +1,4 @@
-import { W, H, STATE, VOLUME_STEPS } from '../config.js';
+import { W, H, STATE, STAGE_COUNT, VOLUME_STEPS } from '../config.js';
 import { ctx } from '../canvas.js';
 import type { GameContext } from './GameContext.js';
 import { CanvasRenderer, type RenderContext } from './Renderer.js';
@@ -14,6 +14,14 @@ import {
   type LeaderboardEntry,
   qualifiesForLeaderboard,
 } from './leaderboard.js';
+import {
+  loadProgress,
+  recordStageReached,
+  sanitizeProgress,
+  saveProgress,
+  unlockNextStage as unlockProgressNextStage,
+  type CampaignProgress,
+} from './progress.js';
 import { resetCombo, updateScoring, type StageBonusAward } from './scoring.js';
 import { isTouch } from './input.js';
 import { diffMultFor, densityForStage } from './difficulty.js';
@@ -64,6 +72,7 @@ export class Game implements GameContext {
   leaderboard: LeaderboardEntry[] = loadLeaderboard(); // local top-10 scores with initials
   highScore = loadHighScore(this.leaderboard);   // persisted best score, compatible with legacy raidenHS
   initialsEntry: InitialsEntry | null = null;    // active game-over initials entry, if the score qualifies
+  progress: CampaignProgress = loadProgress();   // local campaign unlocks and best reached loop/stage
   combo = 0;                         // active kill-chain multiplier (0 = inactive)
   comboTimer = 0;                    // seconds until active combo expires
   maxCombo = 0;                      // best combo reached during this run
@@ -203,6 +212,27 @@ export class Game implements GameContext {
     }
   }
 
+  /** Highest stage the player may launch from the title stage-select menu. */
+  maxSelectableStage(): number {
+    this.progress = sanitizeProgress(this.progress);
+    return this.progress.highestStage;
+  }
+
+  /** Persist the next stage unlock after a clear, keeping storage best-effort. */
+  unlockNextStage(clearedStage: number): void {
+    this.progress = unlockProgressNextStage(this.progress, clearedStage);
+    saveProgress(this.progress);
+  }
+
+  private clampAuthoredStage(stage: number): number {
+    const clean = Number.isFinite(stage) ? Math.floor(stage) : 1;
+    return Math.max(1, Math.min(STAGE_COUNT, clean));
+  }
+
+  private clampSelectableStage(stage: number): number {
+    return Math.max(1, Math.min(this.maxSelectableStage(), this.clampAuthoredStage(stage)));
+  }
+
   /** Enter game-over and prepare a leaderboard initials prompt for qualifying scores. */
   enterGameOver(): void {
     this.state = STATE.GAMEOVER;
@@ -271,8 +301,9 @@ export class Game implements GameContext {
     if (advance) this.moveInitialsCursor(1);
   }
 
-  /** Reset for a brand-new run: fresh player/score, clear transient arrays, enter stage `stage` (1-based, default 1). */
+  /** Reset for a brand-new run: fresh player/score, clear transient arrays, enter an unlocked stage (default 1). */
   startGame(stage = 1): void {
+    const firstStage = this.clampSelectableStage(stage);
     this.score = 0;
     resetCombo(this);
     this.maxCombo = 0;
@@ -285,13 +316,17 @@ export class Game implements GameContext {
     this.player = createPlayer();
     this.particles.length = 0;
     this.powerups.length = 0;
-    this.startStage(stage);
+    this.selectedStage = firstStage;
+    this.startStage(firstStage);
     this.state = STATE.PLAYING;
   }
 
   /** Reset per-stage state and begin stage `n` (1-based): rebuild difficulty, background, and wave table. */
   startStage(stage: number): void {
+    stage = this.clampAuthoredStage(stage);
     this.currentStage = stage;
+    this.progress = recordStageReached(this.progress, stage, this.loopMult);
+    saveProgress(this.progress);
     this.music.play(stageThemeFor(stage));
     resetCombo(this);
     this.stageNoMiss = true;
@@ -340,6 +375,7 @@ export class Game implements GameContext {
   updateStageClear(dt: number): void {
     this.stageClearTimer -= dt;
     if (this.stageClearTimer <= 0) {
+      this.unlockNextStage(this.currentStage);
       this.startStage(this.currentStage + 1);
       this.state = STATE.PLAYING;
     }

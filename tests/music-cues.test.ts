@@ -54,6 +54,7 @@ describe('music cues', () => {
   it('switches to the title theme on victory', () => {
     const spy = new SpyMusic();
     const g = newGame(spy);
+    g.progress = { ...g.progress, highestStage: 18 };
     g.loopMult = 1; g.startGame(18);
     g.waveTable = [{ t: 0, boss: 18 }]; g.waveIndex = 0; g.stageTimer = 99;
     g.lastTime = 1000;

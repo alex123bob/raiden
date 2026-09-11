@@ -45,11 +45,24 @@ longer play sessions, so settings need one more accessibility control.
 - Keep held-fire and one-shot bomb latch semantics identical across aliases.
 - Update keyboard hints so the extra controls are discoverable.
 
+## Phase 4 Slice E: Local Campaign Progression
+
+- Add a best-effort `localStorage['raidenProgress']` save with the highest
+  unlocked stage, best reached loop, best reached stage, and update timestamp.
+- Unlock the next stage when a boss clear is committed, before the stage-clear
+  interlude advances to the next stage.
+- Clamp title-screen stage select and `startGame(stage)` to unlocked stages, so
+  replay starts remain campaign-progress gated.
+- Surface progress on the title and stage-select screens without adding a new
+  menu or changing the arcade run reset rules.
+- Keep the save scope meta-only: no mid-stage checkpoint, no player loadout
+  restore, and no online/cloud sync.
+
 ## Non-goals
 
 - No DOM accessibility overlay; the project remains a single-canvas arcade game.
 - No remapping UI or colorblind palette work in this slice.
-- No save-game or online meta progression.
+- No mid-run save-game, player loadout restore, or online meta progression.
 
 ## Testing
 
@@ -62,4 +75,8 @@ longer play sessions, so settings need one more accessibility control.
   emits the extra outline only when the setting is enabled.
 - Fire/bomb aliases behave like the primary keys, including held fire and the
   one-bomb-per-press latch.
+- Progress helpers sanitize corrupt storage, persist safe JSON, clamp stage
+  unlocks to the authored campaign, and preserve best loop/stage reached.
+- Boss clears update local campaign progress and make the next stage available
+  through the title stage-select flow.
 - Existing unit tests, typecheck, and single-file production build remain green.

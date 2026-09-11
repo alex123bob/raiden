@@ -44,6 +44,7 @@ describe('game smoke test (real module graph, stubbed DOM)', () => {
     game.boss!.hp = 0;
     game.loop(ts += 1000 / 60);
     expect(game.state).toBe(4);
+    expect(game.progress.highestStage).toBe(2);
     game.stageClearTimer = 0.001;
     // Boss death triggers a brief hit-stop (~110ms); drain it before the
     // stage-clear countdown (which runs on the frozen gameplay dt) can elapse.
@@ -74,14 +75,23 @@ describe('game smoke test (real module graph, stubbed DOM)', () => {
     expect(g3.currentStage).toBe(1);
   });
 
-  it('startGame(stage) jumps straight into the requested stage', () => {
+  it('startGame(stage) jumps straight into an unlocked requested stage', () => {
     const game = newGame();
     game.loopMult = 1;
+    game.progress = { ...game.progress, highestStage: 4 };
     game.startGame(4);
     expect(game.currentStage).toBe(4);
     expect(game.player).not.toBeNull();
     expect(game.waveTable.length).toBeGreaterThan(0);
     expect(game.waveTable.some(e => e.type === 'dropship')).toBe(true);
+  });
+
+  it('startGame(stage) clamps locked stage requests to campaign progress', () => {
+    const game = newGame();
+    game.loopMult = 1;
+    game.startGame(4);
+    expect(game.currentStage).toBe(1);
+    expect(game.selectedStage).toBe(1);
   });
 
   it('renders every screen state without unbound references', () => {

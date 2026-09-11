@@ -1,4 +1,4 @@
-import { W, H } from '../config.js';
+import { W, H, STAGE_COUNT } from '../config.js';
 import { ctx } from '../canvas.js';
 import { isTouch } from '../core/input.js';
 import type { Game } from '../core/Game.js';
@@ -32,8 +32,12 @@ export function drawTitle(g: Game) {
   ctx.fillStyle = '#aaaaaa';
   ctx.font = '13px monospace';
   ctx.fillText('HI-SCORE: ' + g.highScore, W/2, 376);
+  ctx.fillStyle = '#aaffaa';
+  ctx.fillText('PROGRESS: STAGE ' + g.maxSelectableStage() + '/' + STAGE_COUNT, W/2, 394);
+  ctx.fillStyle = '#88ccff';
+  ctx.fillText('BEST: LOOP ' + g.progress.bestLoop + ' STAGE ' + g.progress.bestStage, W/2, 412);
 
-  drawLeaderboard(g.leaderboard, 404, 5, 'TOP SCORES');
+  drawLeaderboard(g.leaderboard, 436, 5, 'TOP SCORES');
 
   // Control hints differ by input method.
   ctx.fillStyle = '#888';
@@ -47,7 +51,7 @@ export function drawTitle(g: Game) {
   }
 }
 
-/** Stage-select screen: pick any authored stage (1..STAGE_COUNT) to jump straight into, for testing/replay. */
+/** Stage-select screen: replay any locally unlocked authored stage. */
 export function drawStageSelect(g: Game) {
   ctx.fillStyle = 'rgba(0,0,0,0.85)';
   ctx.fillRect(0, 0, W, H);
@@ -57,15 +61,21 @@ export function drawStageSelect(g: Game) {
   ctx.textAlign = 'center';
   ctx.fillText('SELECT STAGE', W/2, 140);
 
-  const stage = STAGES[g.selectedStage - 1];
+  const unlocked = g.maxSelectableStage();
+  const selectedStage = Math.min(g.selectedStage, unlocked);
+  const stage = STAGES[selectedStage - 1];
 
   ctx.shadowColor = '#0099ff';
   ctx.shadowBlur = 24;
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 64px monospace';
-  ctx.fillText('◄ ' + String(g.selectedStage).padStart(2, '0') + ' ►', W/2, 240);
+  ctx.fillText('◄ ' + String(selectedStage).padStart(2, '0') + ' ►', W/2, 240);
   ctx.shadowBlur = 0;
   ctx.shadowColor = 'transparent';
+
+  ctx.fillStyle = '#aaffaa';
+  ctx.font = '13px monospace';
+  ctx.fillText('UNLOCKED: ' + unlocked + '/' + STAGE_COUNT, W/2, 274);
 
   // Distinct enemy types this stage spawns (in wave order, deduped) plus its boss.
   const seen = new Set<string>();
@@ -78,6 +88,13 @@ export function drawStageSelect(g: Game) {
   ctx.fillText('ENEMIES: ' + (enemyTypes.join(', ') || 'none'), W/2, 300);
   ctx.fillStyle = '#ffaa88';
   ctx.fillText('BOSS: ' + stage.boss.type, W/2, 322);
+  ctx.fillStyle = '#88ccff';
+  ctx.fillText('BEST: LOOP ' + g.progress.bestLoop + ' STAGE ' + g.progress.bestStage, W/2, 346);
+  if (unlocked < STAGE_COUNT) {
+    ctx.fillStyle = '#777';
+    ctx.font = '11px monospace';
+    ctx.fillText('CLEAR STAGE ' + unlocked + ' TO UNLOCK NEXT', W/2, 380);
+  }
 
   ctx.fillStyle = '#666';
   ctx.font = '11px monospace';

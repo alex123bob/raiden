@@ -198,6 +198,7 @@ export function onBossDeath(ctx: GameContext): void {
   ctx.boss = null;
 
   if (ctx.currentStage < STAGE_COUNT) {
+    ctx.unlockNextStage(ctx.currentStage);
     // More stages remain: brief stage-clear interlude, then the next stage.
     ctx.state = STATE.STAGECLEAR;
     ctx.stageClearTimer = 3.0;
