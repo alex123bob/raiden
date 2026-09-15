@@ -1,4 +1,5 @@
 import { STAGE_COUNT } from '../config.js';
+import { loadLeaderboard, type LeaderboardEntry } from './leaderboard.js';
 
 export const PROGRESS_KEY = 'raidenProgress';
 
@@ -52,7 +53,13 @@ export function loadProgress(): CampaignProgress {
   if (!storage) return defaultProgress();
   try {
     const raw = storage.getItem(PROGRESS_KEY);
-    return raw ? sanitizeProgress(JSON.parse(raw)) : defaultProgress();
+    if (raw !== null) return raw ? sanitizeProgress(JSON.parse(raw)) : defaultProgress();
+
+    // Older builds only stored reached stage/loop data in leaderboard rows.
+    // Seed the new save once so returning players keep their campaign unlocks.
+    const migrated = migrateProgressFromLeaderboard(loadLeaderboard());
+    saveProgress(migrated);
+    return migrated;
   } catch {
     return defaultProgress();
   }
@@ -66,6 +73,34 @@ export function saveProgress(progress: CampaignProgress): void {
   } catch {
     // Storage may be unavailable or quota-limited; progression is best-effort.
   }
+}
+
+export function migrateProgressFromLeaderboard(
+  entries: readonly LeaderboardEntry[],
+  now = Date.now(),
+): CampaignProgress {
+  let highestStage = 1;
+  let bestLoop = 1;
+  let bestStage = 1;
+
+  for (const entry of entries) {
+    const stage = boundedStage(entry.stage, 1);
+    const loop = positiveInt(entry.loop, 1);
+    // Reaching loop 2 means the player already cleared the full first loop.
+    if (loop > 1) highestStage = STAGE_COUNT;
+    else highestStage = Math.max(highestStage, stage);
+    if (loop > bestLoop || (loop === bestLoop && stage > bestStage)) {
+      bestLoop = loop;
+      bestStage = stage;
+    }
+  }
+
+  return {
+    highestStage,
+    bestLoop,
+    bestStage,
+    updatedAt: entries.length ? positiveInt(now, Date.now()) : 0,
+  };
 }
 
 export function recordStageReached(
