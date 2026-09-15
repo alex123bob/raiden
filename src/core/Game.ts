@@ -17,6 +17,7 @@ import {
 import {
   loadProgress,
   recordStageReached,
+  resetProgress,
   sanitizeProgress,
   saveProgress,
   unlockNextStage as unlockProgressNextStage,
@@ -73,6 +74,7 @@ export class Game implements GameContext {
   highScore = loadHighScore(this.leaderboard);   // persisted best score, compatible with legacy raidenHS
   initialsEntry: InitialsEntry | null = null;    // active game-over initials entry, if the score qualifies
   progress: CampaignProgress = loadProgress();   // local campaign unlocks and best reached loop/stage
+  progressResetArmed = false;          // settings-panel guard: first P arms, second P resets progress
   combo = 0;                         // active kill-chain multiplier (0 = inactive)
   comboTimer = 0;                    // seconds until active combo expires
   maxCombo = 0;                      // best combo reached during this run
@@ -222,6 +224,22 @@ export class Game implements GameContext {
   unlockNextStage(clearedStage: number): void {
     this.progress = unlockProgressNextStage(this.progress, clearedStage);
     saveProgress(this.progress);
+  }
+
+  /** Arm or confirm the guarded campaign-progress reset from settings. */
+  requestProgressReset(): void {
+    if (!this.progressResetArmed) {
+      this.progressResetArmed = true;
+      return;
+    }
+    this.resetCampaignProgress();
+  }
+
+  /** Reset only campaign unlock metadata; scores, leaderboard, and settings are preserved. */
+  resetCampaignProgress(): void {
+    this.progress = resetProgress();
+    this.selectedStage = 1;
+    this.progressResetArmed = false;
   }
 
   private clampAuthoredStage(stage: number): number {

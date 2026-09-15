@@ -75,6 +75,12 @@ export function saveProgress(progress: CampaignProgress): void {
   }
 }
 
+export function resetProgress(now = Date.now()): CampaignProgress {
+  const progress = defaultProgress(now);
+  saveProgress(progress);
+  return progress;
+}
+
 export function migrateProgressFromLeaderboard(
   entries: readonly LeaderboardEntry[],
   now = Date.now(),

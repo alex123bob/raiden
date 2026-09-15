@@ -55,6 +55,8 @@ longer play sessions, so settings need one more accessibility control.
   replay starts remain campaign-progress gated.
 - Surface progress on the title and stage-select screens without adding a new
   menu or changing the arcade run reset rules.
+- Add a guarded settings-panel reset for campaign progress only, requiring a
+  deliberate arm/confirm action and preserving leaderboard/high-score data.
 - Keep the save scope meta-only: no mid-stage checkpoint, no player loadout
   restore, and no online/cloud sync.
 
@@ -79,4 +81,6 @@ longer play sessions, so settings need one more accessibility control.
   unlocks to the authored campaign, and preserve best loop/stage reached.
 - Boss clears update local campaign progress and make the next stage available
   through the title stage-select flow.
+- Progress reset writes an explicit stage-1 save, does not delete leaderboard
+  history, and remains gated by a second confirm action in settings.
 - Existing unit tests, typecheck, and single-file production build remain green.

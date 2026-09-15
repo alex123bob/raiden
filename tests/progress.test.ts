@@ -6,6 +6,7 @@ import {
   migrateProgressFromLeaderboard,
   PROGRESS_KEY,
   recordStageReached,
+  resetProgress,
   sanitizeProgress,
   saveProgress,
   unlockNextStage,
@@ -93,6 +94,17 @@ describe('campaign progress helpers', () => {
 
   it('builds a default migration result when no leaderboard history exists', () => {
     expect(migrateProgressFromLeaderboard([], 0)).toEqual(defaultProgress());
+  });
+
+  it('resets campaign progress without deleting leaderboard history', () => {
+    store[LEADERBOARD_KEY] = JSON.stringify([
+      { initials: 'AAA', score: 900, stage: STAGE_COUNT, loop: 2, date: 1 },
+    ]);
+    saveProgress(progress({ highestStage: STAGE_COUNT, bestLoop: 2, bestStage: 4, updatedAt: 10 }));
+
+    expect(resetProgress(123)).toEqual(defaultProgress(123));
+    expect(store[LEADERBOARD_KEY]).toBeDefined();
+    expect(loadProgress()).toEqual(defaultProgress(123));
   });
 
   it('saveProgress never throws when localStorage is unavailable', () => {

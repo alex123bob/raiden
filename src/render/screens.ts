@@ -117,7 +117,7 @@ export function drawPause(g: Game) {
 /** Settings panel: a centered box showing audio, speed, and accessibility settings, with key hints. */
 export function drawSettings(g: Game) {
   // Panel geometry (touch input.ts's touchDiscrete hit-tests mirror these bands).
-  const bx = W/2 - 130, by = H/2 - 125, bw = 260, bh = 285;
+  const bx = W/2 - 130, by = H/2 - 150, bw = 260, bh = 330;
   ctx.fillStyle = 'rgba(0,10,30,0.94)';
   ctx.fillRect(bx, by, bw, bh);
   ctx.strokeStyle = '#4488ff';
@@ -137,12 +137,14 @@ export function drawSettings(g: Game) {
   ctx.fillText('R  Reduce Motion: ' + (g.reducedMotion ? 'ON ' : 'OFF'), W/2, by + 140);
   ctx.fillText('H  Show Hitbox: ' + (g.showHitbox ? 'ON ' : 'OFF'), W/2, by + 164);
   ctx.fillText('C  Threat Contrast: ' + (g.threatContrast ? 'ON ' : 'OFF'), W/2, by + 188);
+  ctx.fillStyle = g.progressResetArmed ? '#ffcc66' : '#aaaaff';
+  ctx.fillText('P  Reset Progress: ' + (g.progressResetArmed ? 'CONFIRM' : 'ARM'), W/2, by + 212);
 
   ctx.fillStyle = '#666';
   ctx.font = '11px monospace';
-  ctx.fillText('M sound   [ / ] speed   V volume', W/2, by + 226);
-  ctx.fillText('R motion   H hitbox   C contrast', W/2, by + 246);
-  ctx.fillText('S close', W/2, by + 266);
+  ctx.fillText('M sound   [ / ] speed   V volume', W/2, by + 250);
+  ctx.fillText('R motion   H hitbox   C contrast', W/2, by + 270);
+  ctx.fillText('P arm/confirm reset   S close', W/2, by + 290);
 }
 
 /** Game-over screen: dark scrim, score, leaderboard entry/display, and the continue/share hint. */
